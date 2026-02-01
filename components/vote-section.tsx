@@ -370,7 +370,43 @@ export function VoteSection({
                   <h2 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
                     {selectedProfile.name}
                   </h2>
+                  {selectedProfile.alias && (
+                    <p className="text-primary font-medium mb-2">{selectedProfile.alias}</p>
+                  )}
                   <p className="text-muted-foreground leading-relaxed mb-4">{selectedProfile.bio}</p>
+
+                  {/* Music Info */}
+                  {(selectedProfile.songCount || selectedProfile.candidateSong || selectedProfile.audioFile) && (
+                    <div className="mb-4">
+                      <h3 className="text-sm font-semibold text-primary mb-2 flex items-center gap-2 justify-center sm:justify-start">
+                        <Sparkles className="w-4 h-4" />
+                        Informations Musicales
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                        {selectedProfile.songCount && (
+                          <div className="bg-muted/30 rounded-lg p-3">
+                            <p className="text-xs text-muted-foreground">Nombre de chansons</p>
+                            <p className="font-semibold">{selectedProfile.songCount}</p>
+                          </div>
+                        )}
+                        {selectedProfile.candidateSong && (
+                          <div className="bg-muted/30 rounded-lg p-3">
+                            <p className="text-xs text-muted-foreground">Chanson candidate</p>
+                            <p className="font-semibold">{selectedProfile.candidateSong}</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Audio Preview */}
+                      {selectedProfile.audioFile && (
+                        <AudioPreview
+                          audioUrl={selectedProfile.audioFile}
+                          songTitle={selectedProfile.candidateSong}
+                          artistName={selectedProfile.name}
+                        />
+                      )}
+                    </div>
+                  )}
 
                   {/* Achievements */}
                   {selectedProfile.achievements && selectedProfile.achievements.length > 0 && (

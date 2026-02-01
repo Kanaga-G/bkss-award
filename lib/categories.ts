@@ -28,7 +28,7 @@ export const CATEGORIES: Category[] = [
   {
     id: "trophee-leadership",
     name: "Prix d'Honneur Leadership",
-    subtitle: "Réservé à Kass - Révéler à la fin du vote",
+    subtitle: "- Révéler à la fin du vote",
     candidates: [],
     special: true,
     isLeadershipPrize: true,
@@ -49,8 +49,6 @@ export const CATEGORIES: Category[] = [
       Tu es de ceux dont on ne sait jamais vraiment s'ils sont partis ou s'ils sont simplement passés dans une autre dimension de l'existence. Car comment pourrait-on dire qu'un homme comme toi a disparu, quand chaque rue de Bankass porte encore l'écho de tes pas, quand chaque jeune que tu as guidé continue de porter ta flamme ?
 
       Tu nous as appris que le leadership n'est pas une question de titre, mais de cœur. Que la vraie richesse se mesure non pas à ce que l'on possède, mais à ce que l'on donne. Tu as été le père que beaucoup n'ont jamais eu, le frère sur qui l'on pouvait compter, l'ami qui ne jugeait jamais.
-
-      Les Winner Boys, cette famille que tu as créée, continue de grandir. Chaque succès que nous célébrons ce soir, chaque prix que nous décernons, porte ton empreinte invisible mais indélébile.
 
       Si tu es là-haut, sache que nous pensons à toi chaque jour.
       Si tu es quelque part ici-bas, sache que nous te cherchons encore.
