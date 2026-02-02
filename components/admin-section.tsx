@@ -32,7 +32,7 @@ import { CandidateDetailModal } from "@/components/candidate-detail-modal"
 import { CandidateEditor } from "@/components/candidate-editor"
 import type { User, Vote } from "@/hooks/use-api-data"
 import type { Category, Candidate } from "@/lib/categories"
-import { useUsers, useCategories } from "@/hooks/use-api-data"
+import { useUsers, useCategories, useCandidates } from "@/hooks/use-api-data"
 
 interface AdminSectionProps {
   votes: Vote[]
@@ -51,6 +51,7 @@ export function AdminSection({
 }: AdminSectionProps) {
   const { users, createUser, deleteUser, refetch: refetchUsers } = useUsers()
   const { categories, createCategory, deleteCategory, refetch: refetchCategories } = useCategories()
+  const { createCandidate, refetch: refetchCandidates } = useCandidates()
   const [activeTab, setActiveTab] = useState<AdminTab>("overview")
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
   const [editingCandidate, setEditingCandidate] = useState<{
@@ -122,20 +123,24 @@ export function AdminSection({
     }
   }
 
-  const handleAddCandidate = (categoryId: string) => {
-    const newCandidate: Candidate = {
-      id: `${categoryId}-${Date.now()}`,
-      name: "Nouveau Candidat",
-      image: "/portrait-candidat.jpg",
-      bio: "Biographie du candidat...",
-      achievements: ["Réalisation 1"],
+  const handleAddCandidate = async (categoryId: string) => {
+    try {
+      const newCandidate = await createCandidate({
+        categoryId,
+        name: "Nouveau Candidat",
+        image: "/portrait-candidat.jpg",
+        bio: "Biographie du candidat...",
+        achievements: ["Réalisation 1"],
+      })
+      setEditingCandidate({ categoryId, candidate: newCandidate })
+      await refetchCategories() // Recharger les catégories pour voir le nouveau candidat
+      setMessage({ type: "success", text: "Candidat créé avec succès !" })
+      setTimeout(() => setMessage(null), 3000)
+    } catch (error) {
+      console.error("Erreur lors de la création du candidat:", error)
+      setMessage({ type: "error", text: "Erreur lors de la création du candidat" })
+      setTimeout(() => setMessage(null), 3000)
     }
-    setCategories(
-      categories.map((cat) =>
-        cat.id === categoryId ? { ...cat, candidates: [...cat.candidates, newCandidate] } : cat,
-      ),
-    )
-    setEditingCandidate({ categoryId, candidate: newCandidate })
   }
 
   const handleSaveCandidate = (categoryId: string, candidate: Candidate) => {

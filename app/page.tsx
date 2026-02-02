@@ -32,7 +32,14 @@ const DEFAULT_SUPER_ADMIN: User = {
 }
 
 export default function BankassAwards() {
-  const [currentPage, setCurrentPage] = useState<Page>("home")
+  const [currentPage, setCurrentPage] = useState<Page>(() => {
+    // Récupérer la page sauvegardée depuis localStorage
+    if (typeof window !== 'undefined') {
+      const savedPage = localStorage.getItem("currentPage") as Page
+      return savedPage || "home"
+    }
+    return "home"
+  })
   const { currentUser, login, logout } = useCurrentUser()
   const { users, loading: usersLoading } = useUsers()
   const { categories, loading: categoriesLoading } = useCategories()
@@ -54,6 +61,13 @@ export default function BankassAwards() {
     document.documentElement.classList.toggle("dark", theme === "dark")
     localStorage.setItem("theme", theme)
   }, [theme])
+
+  useEffect(() => {
+    // Sauvegarder la page actuelle dans localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("currentPage", currentPage)
+    }
+  }, [currentPage])
 
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light")

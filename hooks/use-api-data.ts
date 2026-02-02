@@ -209,6 +209,50 @@ export function useCategories() {
   return { categories, loading, error, refetch: fetchCategories, createCategory, updateCategory, deleteCategory }
 }
 
+// Hook pour les candidats
+export function useCandidates(categoryId?: string) {
+  const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchCandidates = useCallback(async () => {
+    try {
+      setLoading(true)
+      const url = categoryId ? `/api/candidates?categoryId=${categoryId}` : '/api/candidates'
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('Erreur lors de la récupération des candidats')
+      const data = await response.json()
+      setCandidates(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+    } finally {
+      setLoading(false)
+    }
+  }, [categoryId])
+
+  const createCandidate = useCallback(async (candidateData: any) => {
+    try {
+      const response = await fetch('/api/candidates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(candidateData)
+      })
+      if (!response.ok) throw new Error('Erreur lors de la création du candidat')
+      const newCandidate = await response.json()
+      setCandidates(prev => [...prev, newCandidate])
+      return newCandidate
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'Erreur inconnue')
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchCandidates()
+  }, [fetchCandidates])
+
+  return { candidates, loading, error, refetch: fetchCandidates, createCandidate }
+}
+
 // Hook pour les votes
 export function useVotes() {
   const [votes, setVotes] = useState<Vote[]>([])
