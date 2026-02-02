@@ -9,9 +9,9 @@ import { VoteSection } from "@/components/vote-section"
 import { ResultsSection } from "@/components/results-section"
 import { AdminSection } from "@/components/admin-section"
 import { UserProfile } from "@/components/user-profile"
-import { AccessBlocked } from "@/components/access-blocked"
+// import { AccessBlocked } from "@/components/access-blocked"
 import { useUsers, useCategories, useVotes, useCurrentUser } from "@/hooks/use-api-data"
-import { isAccessBlockedServer, isAccessBlocked } from "@/lib/access-control"
+// import { isAccessBlockedServer, isAccessBlocked } from "@/lib/access-control"
 import type { User, Category, Vote } from "@/hooks/use-api-data"
 
 export type UserRole = "VOTER" | "SUPER_ADMIN"
@@ -50,12 +50,12 @@ export default function BankassAwards() {
   const [leadershipRevealed, setLeadershipRevealed] = useState<boolean>(false)
   const [isMounted, setIsMounted] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(true)
-  const [accessBlocked, setAccessBlocked] = useState(false)
+  // const [accessBlocked, setAccessBlocked] = useState(false)
 
   // Gérer le contrôle d'accès côté client pour éviter l'hydratation
   useEffect(() => {
     setIsMounted(true)
-    setAccessBlocked(isAccessBlocked())
+    // setAccessBlocked(isAccessBlocked())
     
     // Le theme est stocké dans localStorage pour l'instant
     const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null
@@ -71,7 +71,7 @@ export default function BankassAwards() {
 
   // Rafraîchissement automatique toutes les 30 secondes
   useEffect(() => {
-    if (!autoRefresh || accessBlocked) return
+    // if (!autoRefresh || accessBlocked) return
     
     const interval = setInterval(() => {
       refetchCategories()
@@ -79,15 +79,16 @@ export default function BankassAwards() {
     }, 30000) // 30 secondes
 
     return () => clearInterval(interval)
-  }, [autoRefresh, refetchCategories, refetchVotes, accessBlocked])
+  }, [autoRefresh, refetchCategories, refetchVotes]) // , accessBlocked])
 
   // Rafraîchissement lors du retour sur la page d'accueil
   useEffect(() => {
-    if (currentPage === "home" && !accessBlocked) {
+    // if (currentPage === "home" && !accessBlocked) {
+    if (currentPage === "home") {
       refetchCategories()
       refetchVotes()
     }
-  }, [currentPage, refetchCategories, refetchVotes, accessBlocked])
+  }, [currentPage, refetchCategories, refetchVotes]) // , accessBlocked])
 
   useEffect(() => {
     // Sauvegarder la page actuelle dans localStorage
@@ -120,9 +121,9 @@ export default function BankassAwards() {
     )
   }
 
-  if (accessBlocked) {
-    return <AccessBlocked />
-  }
+  // if (accessBlocked) {
+  //   return <AccessBlocked />
+  // }
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-500">
