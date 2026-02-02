@@ -296,20 +296,22 @@ export function useVotes() {
   return { votes, loading, error, refetch: fetchVotes, createVote }
 }
 
-// Hook pour l'utilisateur actuel (remplace useLocalStorage pour currentUser)
+// Hook pour l'utilisateur actuel avec Supabase Auth
 export function useCurrentUser() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Pour l'instant, on utilise le localStorage pour la session utilisateur
-  // Plus tard, on pourra implémenter un vrai système d'authentification
+  // Utiliser Supabase Auth pour la session utilisateur
   useEffect(() => {
+    // Pour l'instant, on garde une compatibilité avec localStorage
+    // pendant la transition vers Supabase Auth complet
     const savedUser = localStorage.getItem('currentUser')
     if (savedUser) {
       try {
         setCurrentUser(JSON.parse(savedUser))
       } catch (error) {
-        console.error('Erreur lors de la lecture de l\'utilisateur:', error)
+        console.error('Error parsing saved user:', error)
+        localStorage.removeItem('currentUser')
       }
     }
     setLoading(false)
@@ -317,11 +319,13 @@ export function useCurrentUser() {
 
   const login = useCallback((user: User) => {
     setCurrentUser(user)
+    // TODO: Remplacer par Supabase Auth session
     localStorage.setItem('currentUser', JSON.stringify(user))
   }, [])
 
   const logout = useCallback(() => {
     setCurrentUser(null)
+    // TODO: Remplacer par Supabase Auth signOut
     localStorage.removeItem('currentUser')
   }, [])
 
