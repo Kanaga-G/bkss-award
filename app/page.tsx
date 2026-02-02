@@ -42,11 +42,32 @@ export default function BankassAwards() {
   })
   const { currentUser, login, logout } = useCurrentUser()
   const { users, loading: usersLoading } = useUsers()
-  const { categories, loading: categoriesLoading } = useCategories()
-  const { votes, loading: votesLoading } = useVotes()
+  const { categories, loading: categoriesLoading, refetch: refetchCategories } = useCategories()
+  const { votes, loading: votesLoading, refetch: refetchVotes } = useVotes()
   const [theme, setTheme] = useState<"light" | "dark">("dark")
   const [leadershipRevealed, setLeadershipRevealed] = useState<boolean>(false)
   const [isMounted, setIsMounted] = useState(false)
+  const [autoRefresh, setAutoRefresh] = useState(true)
+
+  // Rafraîchissement automatique toutes les 30 secondes
+  useEffect(() => {
+    if (!autoRefresh) return
+    
+    const interval = setInterval(() => {
+      refetchCategories()
+      refetchVotes()
+    }, 30000) // 30 secondes
+
+    return () => clearInterval(interval)
+  }, [autoRefresh, refetchCategories, refetchVotes])
+
+  // Rafraîchissement lors du retour sur la page d'accueil
+  useEffect(() => {
+    if (currentPage === "home") {
+      refetchCategories()
+      refetchVotes()
+    }
+  }, [currentPage, refetchCategories, refetchVotes])
 
   useEffect(() => {
     setIsMounted(true)
@@ -100,7 +121,15 @@ export default function BankassAwards() {
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
         >
-          {currentPage === "home" && <HeroSection setCurrentPage={setCurrentPage} currentUser={currentUser} />}
+          {currentPage === "home" && (
+            <HeroSection 
+              setCurrentPage={setCurrentPage} 
+              currentUser={currentUser} 
+              categories={categories}
+              votes={votes}
+              loading={categoriesLoading || votesLoading}
+            />
+          )}
           {currentPage === "auth" && (
             <AuthSection
               setCurrentPage={setCurrentPage}

@@ -1,41 +1,50 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Trophy, Vote, BarChart3, Sparkles, Award, ArrowRight } from "lucide-react"
+import { Trophy, Vote, BarChart3, Sparkles, Award, ArrowRight, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { Page, User } from "@/app/page"
+import type { Page } from "@/app/page"
+import type { User } from "@/hooks/use-api-data"
 
 interface HeroSectionProps {
   setCurrentPage: (page: Page) => void
   currentUser: User | null
+  categories?: any[]
+  votes?: any[]
+  loading?: boolean
 }
 
-export function HeroSection({ setCurrentPage, currentUser }: HeroSectionProps) {
+export function HeroSection({ setCurrentPage, currentUser, categories = [], votes = [], loading = false }: HeroSectionProps) {
+  // Calculer les statistiques réelles
+  const totalCategories = categories.length
+  const totalCandidates = categories.reduce((sum, cat) => sum + (cat.candidates?.length || 0), 0)
+  const totalVotes = votes.length
+  
   const features = [
     {
       icon: Trophy,
-      title: "9 Catégories",
+      title: `${totalCategories} Catégories`,
       description: "Catégories prestigieuses récompensant l'excellence dans différents domaines",
       gradient: "from-amber-500 to-orange-500",
     },
     {
       icon: Vote,
-      title: "Vote Transparent",
+      title: `${totalVotes} Votes`,
       description: "Système de vote sécurisé et transparent pour une élection équitable",
       gradient: "from-emerald-500 to-teal-500",
     },
     {
       icon: Award,
-      title: "Reconnaissance",
+      title: `${totalCandidates} Candidats`,
       description: "Mettez en lumière les talents qui façonnent notre communauté",
       gradient: "from-primary to-accent",
     },
   ]
 
   const stats = [
-    { value: "9", label: "Catégories" },
-    { value: "36+", label: "Candidats" },
-    { value: "∞", label: "Possibilités" },
+    { value: loading ? "..." : totalCategories.toString(), label: "Catégories" },
+    { value: loading ? "..." : totalCandidates.toString(), label: "Candidats" },
+    { value: loading ? "..." : totalVotes.toString(), label: "Votes" },
   ]
 
   return (
@@ -108,25 +117,41 @@ export function HeroSection({ setCurrentPage, currentUser }: HeroSectionProps) {
 
             {/* Stats */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
-              className="flex justify-center gap-8 sm:gap-16 mt-16"
+              className="flex flex-wrap justify-center gap-8 mb-12"
             >
               {stats.map((stat, index) => (
                 <motion.div
                   key={stat.label}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.7 + index * 0.1 }}
                   className="text-center"
                 >
-                  <div className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  <div className="text-3xl sm:text-4xl font-bold text-primary mb-1">
                     {stat.value}
                   </div>
-                  <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
+                  <div className="text-sm text-muted-foreground">{stat.label}</div>
                 </motion.div>
               ))}
+            </motion.div>
+
+            {/* Indicateur de synchronisation */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8 }}
+              className="flex items-center justify-center gap-2 mb-8 text-sm text-muted-foreground"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              >
+                <RefreshCw className="w-4 h-4" />
+              </motion.div>
+              <span>Données synchronisées en temps réel</span>
             </motion.div>
           </div>
         </div>
