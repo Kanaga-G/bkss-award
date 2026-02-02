@@ -9,29 +9,10 @@ import { ResultsSection } from "@/components/results-section"
 import { ProfileSection } from "@/components/profile-section"
 import { AdminSection } from "@/components/admin-section"
 import { Navigation } from "@/components/navigation"
-import { useLocalStorage } from "@/hooks/use-local-storage"
-import type { Category } from "@/lib/categories"
-import { CATEGORIES as DEFAULT_CATEGORIES } from "@/lib/categories"
+import { useUsers, useCategories, useVotes, useCurrentUser } from "@/hooks/use-api-data"
+import type { User, Category, Vote } from "@/hooks/use-api-data"
 
-export type UserRole = "voter" | "super_admin"
-
-export type User = {
-  id: string
-  name: string
-  email: string
-  domain?: string
-  city?: string
-  phone?: string
-  role: UserRole
-  createdAt?: string
-}
-
-export type Vote = {
-  userId: string
-  categoryId: string
-  candidateName: string
-  timestamp: number
-}
+export type UserRole = "VOTER" | "SUPER_ADMIN"
 
 export type Page = "home" | "auth" | "vote" | "results" | "profile" | "admin"
 
@@ -46,29 +27,32 @@ const DEFAULT_SUPER_ADMIN: User = {
   id: "super_admin_001",
   name: "Super Admin",
   email: "admin@bankassawards.com",
-  role: "super_admin",
+  role: "SUPER_ADMIN",
   createdAt: new Date().toISOString(),
 }
 
 export default function BankassAwards() {
   const [currentPage, setCurrentPage] = useState<Page>("home")
-  const [currentUser, setCurrentUser] = useLocalStorage<User | null>("currentUser", null)
-  const [theme, setTheme] = useLocalStorage<"light" | "dark">("theme", "dark")
-  const [votes, setVotes] = useLocalStorage<Vote[]>("votes", [])
-  const [users, setUsers] = useLocalStorage<User[]>("users", [DEFAULT_SUPER_ADMIN])
-  const [categories, setCategories] = useLocalStorage<Category[]>("categories", DEFAULT_CATEGORIES)
-  const [leadershipRevealed, setLeadershipRevealed] = useLocalStorage<boolean>("leadershipRevealed", false)
+  const { currentUser, login, logout } = useCurrentUser()
+  const { users, loading: usersLoading } = useUsers()
+  const { categories, loading: categoriesLoading } = useCategories()
+  const { votes, loading: votesLoading } = useVotes()
+  const [theme, setTheme] = useState<"light" | "dark">("dark")
+  const [leadershipRevealed, setLeadershipRevealed] = useState<boolean>(false)
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
-    if (!users.find((u) => u.email === "admin@bankassawards.com")) {
-      setUsers([...users, DEFAULT_SUPER_ADMIN])
+    // Le theme est stocké dans localStorage pour l'instant
+    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null
+    if (savedTheme) {
+      setTheme(savedTheme)
     }
   }, [])
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark")
+    localStorage.setItem("theme", theme)
   }, [theme])
 
   const toggleTheme = () => {
@@ -76,11 +60,11 @@ export default function BankassAwards() {
   }
 
   const handleLogout = () => {
-    setCurrentUser(null)
+    logout()
     setCurrentPage("home")
   }
 
-  const isSuperAdmin = currentUser?.role === "super_admin"
+  const isSuperAdmin = currentUser?.role === "SUPER_ADMIN"
 
   return (
     <div className="min-h-screen bg-background text-foreground transition-colors duration-500">
@@ -106,16 +90,16 @@ export default function BankassAwards() {
           {currentPage === "auth" && (
             <AuthSection
               setCurrentPage={setCurrentPage}
-              setCurrentUser={setCurrentUser}
+              setCurrentUser={login}
               users={users}
-              setUsers={setUsers}
+              setUsers={() => {}} // Les users sont gérés par le hook
             />
           )}
           {currentPage === "vote" && (
             <VoteSection
               currentUser={currentUser}
               votes={votes}
-              setVotes={setVotes}
+              setVotes={() => {}} // Les votes sont gérés par le hook
               setCurrentPage={setCurrentPage}
               categories={categories}
               leadershipRevealed={leadershipRevealed}
@@ -137,15 +121,15 @@ export default function BankassAwards() {
               setCurrentPage={setCurrentPage}
               categories={categories}
               users={users}
-              setUsers={setUsers}
+              setUsers={() => {}} // Les users sont gérés par le hook
             />
           )}
           {currentPage === "admin" && isSuperAdmin && (
             <AdminSection
               users={users}
-              setUsers={setUsers}
+              setUsers={() => {}} // Les users sont gérés par le hook API
               categories={categories}
-              setCategories={setCategories}
+              setCategories={() => {}} // Les catégories sont gérées par le hook API
               votes={votes}
               leadershipRevealed={leadershipRevealed}
               setLeadershipRevealed={setLeadershipRevealed}

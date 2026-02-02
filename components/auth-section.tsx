@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PasswordRecovery } from "@/components/password-recovery"
-import type { Page, User } from "@/app/page"
+import type { Page } from "@/app/page"
+import type { User } from "@/hooks/use-api-data"
 
 interface AuthSectionProps {
   setCurrentPage: (page: Page) => void
@@ -62,7 +63,7 @@ export function AuthSection({ setCurrentPage, setCurrentUser, users, setUsers }:
         id: "super_admin_001",
         name: "Super Admin",
         email: SUPER_ADMIN_EMAIL,
-        role: "super_admin",
+        role: "SUPER_ADMIN",
         createdAt: new Date().toISOString(),
       }
       setCurrentUser(adminUser)
@@ -118,7 +119,7 @@ export function AuthSection({ setCurrentPage, setCurrentUser, users, setUsers }:
       domain: signupDomain,
       city: signupCity,
       phone: signupPhone,
-      role: "voter",
+      role: "VOTER",
       createdAt: new Date().toISOString(),
     }
 
@@ -179,7 +180,7 @@ export function AuthSection({ setCurrentPage, setCurrentUser, users, setUsers }:
                 >
                   <div className="text-center mb-6">
                     <h2 className="text-2xl font-bold mb-2">Bon retour !</h2>
-                    <p className="text-muted-foreground text-sm">Connectez-vous pour continuer à voter</p>
+                    <p className="text-muted-foreground text-sm">Connectez-vous pour continuer à VOTER</p>
                   </div>
 
                   <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">

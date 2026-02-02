@@ -29,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ImageUpload } from "@/components/image-upload"
 import { CandidateDetailModal } from "@/components/candidate-detail-modal"
 import { CandidateEditor } from "@/components/candidate-editor"
-import type { User, Vote } from "@/app/page"
+import type { User, Vote } from "@/hooks/use-api-data"
 import type { Category, Candidate } from "@/lib/categories"
 
 interface AdminSectionProps {
@@ -85,7 +85,7 @@ export function AdminSection({
   ]
 
   const totalVotes = votes.length
-  const totalUsers = users.filter((u) => u.role !== "super_admin").length
+  const totalUsers = users.filter((u) => u.role !== "SUPER_ADMIN").length
   const totalCandidates = categories.reduce((acc, cat) => acc + cat.candidates.length, 0)
 
   const handleAddUser = () => {
@@ -95,7 +95,7 @@ export function AdminSection({
       name: newUser.name,
       email: newUser.email,
       password: newUser.password,
-      role: "voter",
+      role: "VOTER",
       createdAt: new Date().toISOString(),
     }
     setUsers([...users, user as User])
@@ -400,12 +400,12 @@ export function AdminSection({
                       <div className="flex items-center gap-4">
                         <div
                           className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
-                            user.role === "super_admin"
+                            user.role === "SUPER_ADMIN"
                               ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white"
                               : "bg-gradient-to-br from-primary to-accent text-primary-foreground"
                           }`}
                         >
-                          {user.role === "super_admin" ? (
+                          {user.role === "SUPER_ADMIN" ? (
                             <Shield className="w-5 h-5" />
                           ) : (
                             user.name
@@ -419,7 +419,7 @@ export function AdminSection({
                         <div>
                           <p className="font-medium flex items-center gap-2">
                             {user.name}
-                            {user.role === "super_admin" && (
+                            {user.role === "SUPER_ADMIN" && (
                               <span className="text-xs bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full">
                                 Admin
                               </span>
@@ -428,7 +428,7 @@ export function AdminSection({
                           <p className="text-sm text-muted-foreground">{user.email}</p>
                         </div>
                       </div>
-                      {user.role !== "super_admin" && (
+                      {user.role !== "SUPER_ADMIN" && (
                         <div className="flex gap-2">
                           {confirmDelete === user.id ? (
                             <>

@@ -4,7 +4,7 @@ import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Trophy, BarChart3, Sparkles, Crown, Lock, Heart, X, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import type { Vote } from "@/app/page"
+import type { Vote } from "@/hooks/use-api-data"
 import type { Category } from "@/lib/categories"
 
 interface ResultsSectionProps {

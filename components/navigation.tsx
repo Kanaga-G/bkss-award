@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Trophy, Sun, Moon, Menu, X, User, LogOut, Vote, BarChart3, Home, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
-import type { Page, User as UserType } from "@/app/page"
+import type { Page } from "@/app/page"
+import type { User as UserType } from "@/hooks/use-api-data"
 import {
   DropdownMenu,
   DropdownMenuContent,
