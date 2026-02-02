@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Check, Vote as VoteIcon, AlertCircle, Trophy, Sparkles, ChevronDown, X, Lock } from "lucide-react"
+import { Check, Vote as VoteIcon, AlertCircle, Trophy, Sparkles, ChevronDown, X, Lock, Crown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AudioPreview } from "@/components/audio-preview"
 import type { User, Vote } from "@/hooks/use-api-data"
@@ -131,8 +131,52 @@ export function VoteSection({
           </p>
         </motion.div>
 
+        {/* Prix d'honneur - Affiché en haut pour les utilisateurs non-admin */}
+        {currentUser?.role !== 'SUPER_ADMIN' && categories.filter(c => c.isLeadershipPrize).map((leadershipCategory) => (
+          <motion.div
+            key={`leadership-top-${leadershipCategory.id}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0 }}
+            className="bg-gradient-to-r from-amber-500/10 to-orange-600/10 border border-amber-500/30 rounded-2xl p-6 mb-8 shadow-lg"
+          >
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
+                  <Crown className="w-6 h-6 text-amber-500" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-amber-500">Prix Leadership - Hommage Spécial</h2>
+                  <p className="text-muted-foreground">Prix d'Honneur</p>
+                </div>
+              </div>
+              
+              {leadershipRevealed ? (
+                <div className="space-y-4">
+                  <div className="bg-amber-500/10 rounded-xl p-4">
+                    <p className="text-lg font-semibold text-amber-600 dark:text-amber-400">
+                      Cet hommage est dédié à <span className="font-bold">{leadershipCategory.preAssignedWinner}</span>
+                    </p>
+                    {leadershipCategory.preAssignedWinnerBio && (
+                      <p className="text-muted-foreground mt-2">{leadershipCategory.preAssignedWinnerBio}</p>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Consultez la section résultats pour voir l'hommage complet.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-center gap-2 text-amber-500">
+                  <Lock className="w-4 h-4" />
+                  <p className="text-sm">Ce prix hommage sera révélé lors de la cérémonie officielle.</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        ))}
+
         <div className="space-y-6">
-          {categories.map((category, index) => {
+          {categories.filter(c => !c.isLeadershipPrize).map((category, index) => {
             const hasVoted = hasUserVotedInCategory(category.id)
             const userVote = getUserVoteInCategory(category.id)
             const isExpanded = expandedCategories[category.id] ?? !hasVoted
@@ -351,6 +395,55 @@ export function VoteSection({
             )
           })}
         </div>
+
+        {/* Prix d'honneur - Affiché en bas pour les admins */}
+        {currentUser?.role === 'SUPER_ADMIN' && categories.filter(c => c.isLeadershipPrize).map((leadershipCategory) => (
+          <motion.div
+            key={`leadership-bottom-${leadershipCategory.id}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-gradient-to-r from-amber-500/10 to-orange-600/10 border border-amber-500/30 rounded-2xl p-6 mt-8 shadow-lg"
+          >
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
+                  <Crown className="w-6 h-6 text-amber-500" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-amber-500">Prix Leadership - Hommage Spécial</h2>
+                  <p className="text-muted-foreground">Prix d'Honneur</p>
+                </div>
+              </div>
+              
+              {leadershipRevealed ? (
+                <div className="space-y-4">
+                  <div className="bg-amber-500/10 rounded-xl p-4">
+                    <p className="text-lg font-semibold text-amber-600 dark:text-amber-400">
+                      Cet hommage est dédié à <span className="font-bold">{leadershipCategory.preAssignedWinner}</span>
+                    </p>
+                    {leadershipCategory.preAssignedWinnerBio && (
+                      <p className="text-muted-foreground mt-2">{leadershipCategory.preAssignedWinnerBio}</p>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Le prix est maintenant visible par tous les utilisateurs.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center gap-2 text-amber-500">
+                    <Lock className="w-4 h-4" />
+                    <p className="text-sm">Ce prix hommage est masqué pour le moment.</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    En tant qu'administrateur, vous pouvez révéler ce prix une fois le vote conclu.
+                  </p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        ))}
       </div>
 
       {/* Vote Confirmation Modal */}
