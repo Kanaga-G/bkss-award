@@ -50,7 +50,7 @@ export function AdminSection({
   currentUser,
 }: AdminSectionProps) {
   const { users, createUser, deleteUser, refetch: refetchUsers } = useUsers()
-  const { categories, createCategory, deleteCategory, refetch: refetchCategories } = useCategories()
+  const { categories, createCategory, deleteCategory, updateCategory, refetch: refetchCategories } = useCategories()
   const { createCandidate, updateCandidate, refetch: refetchCandidates } = useCandidates()
   const [activeTab, setActiveTab] = useState<AdminTab>("overview")
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
@@ -58,6 +58,7 @@ export function AdminSection({
     categoryId: string
     candidate: Candidate | null
   } | null>(null)
+  const [isUpdating, setIsUpdating] = useState(false)
   const [showAddUser, setShowAddUser] = useState(false)
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "" })
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -144,9 +145,13 @@ export function AdminSection({
   }
 
   const handleSaveCandidate = async (categoryId: string, candidate: Candidate) => {
+    setIsUpdating(true)
     try {
+      // Sauvegarder en base de données d'abord
       await updateCandidate(candidate.id, candidate)
-      await refetchCategories() // Recharger les catégories pour voir les modifications
+      
+      // Puis recharger pour voir les modifications (aperçu quasi-instantané)
+      await refetchCategories()
       setEditingCandidate(null)
       setMessage({ type: "success", text: "Candidat mis à jour avec succès !" })
       setTimeout(() => setMessage(null), 3000)
@@ -154,20 +159,28 @@ export function AdminSection({
       console.error("Erreur lors de la mise à jour du candidat:", error)
       setMessage({ type: "error", text: "Erreur lors de la mise à jour du candidat" })
       setTimeout(() => setMessage(null), 3000)
+    } finally {
+      setIsUpdating(false)
     }
   }
 
   const handleDeleteCandidate = async (categoryId: string, candidateId: string) => {
+    setIsUpdating(true)
     try {
+      // Supprimer en base de données d'abord
       const response = await fetch(`/api/candidates?id=${candidateId}`, { method: 'DELETE' })
       if (!response.ok) throw new Error('Erreur lors de la suppression du candidat')
-      await refetchCategories() // Recharger les catégories pour voir les modifications
+      
+      // Puis recharger pour voir les modifications (aperçu quasi-instantané)
+      await refetchCategories()
       setMessage({ type: "success", text: "Candidat supprimé avec succès !" })
       setTimeout(() => setMessage(null), 3000)
     } catch (error) {
       console.error("Erreur lors de la suppression du candidat:", error)
       setMessage({ type: "error", text: "Erreur lors de la suppression du candidat" })
       setTimeout(() => setMessage(null), 3000)
+    } finally {
+      setIsUpdating(false)
     }
   }
 
@@ -692,8 +705,13 @@ export function AdminSection({
                                     size="sm"
                                     onClick={() => handleDeleteCandidate(selectedCategory, candidate.id)}
                                     className="text-destructive hover:text-destructive"
+                                    disabled={isUpdating}
                                   >
-                                    <Trash2 className="w-4 h-4" />
+                                    {isUpdating ? (
+                                      <div className="w-4 h-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                    ) : (
+                                      <Trash2 className="w-4 h-4" />
+                                    )}
                                   </Button>
                                 </div>
                               </div>
