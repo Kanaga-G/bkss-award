@@ -6,7 +6,7 @@ import { HeroSection } from "@/components/hero-section"
 import { AuthSection } from "@/components/auth-section"
 import { VoteSection } from "@/components/vote-section"
 import { ResultsSection } from "@/components/results-section"
-import { ProfileSection } from "@/components/profile-section"
+import { UserProfile } from "@/components/user-profile"
 import { AdminSection } from "@/components/admin-section"
 import { Navigation } from "@/components/navigation"
 import { useUsers, useCategories, useVotes, useCurrentUser } from "@/hooks/use-api-data"
@@ -153,14 +153,11 @@ export default function BankassAwards() {
               onRevealLeadership={() => setLeadershipRevealed(true)}
             />
           )}
-          {currentPage === "profile" && (
-            <ProfileSection
-              currentUser={currentUser}
-              votes={votes}
-              setCurrentPage={setCurrentPage}
-              categories={categories}
-              users={users}
-              setUsers={() => {}} // Les users sont gérés par le hook
+          {currentPage === "profile" && currentUser && (
+            <UserProfile
+              user={currentUser}
+              onClose={() => setCurrentPage("home")}
+              onUpdate={(updatedUser) => login(updatedUser)}
             />
           )}
           {currentPage === "admin" && isSuperAdmin && (
