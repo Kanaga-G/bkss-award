@@ -2,13 +2,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
 
-// GET - Récupérer tous les utilisateurs
-export async function GET() {
+// GET - Récupérer tous les utilisateurs ou recherche par email/téléphone
+export async function GET(request: NextRequest) {
   try {
-    const { data, error } = await supabaseAdmin
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const { searchParams } = new URL(request.url)
+    const email = searchParams.get('email')
+    const phone = searchParams.get('phone')
+
+    let query = supabaseAdmin.from('users').select('*')
+
+    // Si un email ou téléphone est spécifié, filtrer
+    if (email) {
+      query = query.eq('email', email)
+    } else if (phone) {
+      query = query.eq('phone', phone)
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false })
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
@@ -24,22 +34,37 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, phone, password, role = 'VOTER', domain, city } = body
+    const { name, email, phone, password, role = 'VOTER', domain, city } = body
 
-    // Validation
-    if (!name || !phone) {
-      return NextResponse.json({ error: 'Nom et numéro de téléphone requis' }, { status: 400 })
+    // Validation - accepte soit email soit téléphone
+    if (!name || (!email && !phone)) {
+      return NextResponse.json({ error: 'Nom et email ou téléphone requis' }, { status: 400 })
     }
 
-    // Vérifier si le téléphone existe déjà
-    const { data: existingUser } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('phone', phone)
-      .single()
+    // Vérifier si l'email existe déjà (si fourni)
+    if (email) {
+      const { data: existingEmailUser } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('email', email)
+        .single()
 
-    if (existingUser) {
-      return NextResponse.json({ error: 'Ce numéro de téléphone est déjà utilisé' }, { status: 400 })
+      if (existingEmailUser) {
+        return NextResponse.json({ error: 'Cet email est déjà utilisé' }, { status: 400 })
+      }
+    }
+
+    // Vérifier si le téléphone existe déjà (si fourni)
+    if (phone) {
+      const { data: existingPhoneUser } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .eq('phone', phone)
+        .single()
+
+      if (existingPhoneUser) {
+        return NextResponse.json({ error: 'Ce numéro de téléphone est déjà utilisé' }, { status: 400 })
+      }
     }
 
     // Hasher le mot de passe si fourni
@@ -53,11 +78,12 @@ export async function POST(request: NextRequest) {
       .from('users')
       .insert({
         name,
+        email: email || null, // Email optionnel pour les nouveaux comptes
+        phone: phone || null, // Téléphone optionnel pour les anciens comptes
         password: hashedPassword,
         role,
         domain,
-        city,
-        phone
+        city
       })
       .select()
       .single()

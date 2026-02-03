@@ -26,6 +26,8 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
   const [attempts, setAttempts] = useState(0)
   const [isBlocked, setIsBlocked] = useState(false)
   const [blockTimeLeft, setBlockTimeLeft] = useState(0)
+  const [errorCount, setErrorCount] = useState(0) // Nouveau compteur d'erreurs
+  const [userDomain, setUserDomain] = useState("") // Domaine récupéré automatiquement
 
   // Détecter si l'identifiant est un email ou un téléphone
   const detectIdentifierType = (identifier: string): "email" | "phone" => {
@@ -41,9 +43,44 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
     return undefined
   }
 
+  // Récupérer instantanément le domaine de l'utilisateur
+  const fetchUserDomain = async (identifier: string) => {
+    if (!identifier) {
+      setUserDomain("")
+      return
+    }
+
+    try {
+      const identifierType = detectIdentifierType(identifier)
+      let searchField = identifierType === "email" ? "email" : "phone"
+      
+      const response = await fetch(`/api/users?${searchField}=${encodeURIComponent(identifier)}`)
+      if (response.ok) {
+        const users = await response.json()
+        const user = users.find((u: any) => 
+          identifierType === "email" ? u.email === identifier : u.phone === identifier
+        )
+        
+        if (user && user.domain) {
+          setUserDomain(user.domain)
+        } else {
+          setUserDomain("")
+        }
+      }
+    } catch (error) {
+      // Silencieux en cas d'erreur
+      setUserDomain("")
+    }
+  }
+
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
     setMessage(null)
+    
+    // Récupérer le domaine instantanément quand l'identifiant change
+    if (field === "identifier") {
+      fetchUserDomain(value)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,40 +135,24 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
         return
       }
 
-      let loginData: any
-      
-      if (identifierType === "email") {
-        // Connexion par email (ancienne méthode)
-        loginData = {
-          email: formData.identifier,
-          password: formData.password
-        }
-      } else {
-        // Connexion par téléphone (nouvelle méthode)
-        const normalizedPhone = formData.identifier.replace(/\D/g, '')
-        const formattedPhone = normalizedPhone.startsWith('223') ? `+${normalizedPhone}` : `+223${normalizedPhone}`
-        
-        loginData = {
-          phone: formattedPhone,
-          password: formData.password
-        }
-      }
-
-      // Tenter la connexion
+      // Appel API pour la connexion normale
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(loginData)
+        body: JSON.stringify({
+          [identifierType]: formData.identifier,
+          password: formData.password
+        })
       })
 
-      if (response.ok) {
-        const { user } = await response.json()
-        
+      const result = await response.json()
+
+      if (response.ok && result.user) {
         // Enregistrer la connexion pour la sécurité
-        recordUserConnection(user, getClientIP(), navigator.userAgent)
+        recordUserConnection(result.user, getClientIP(), navigator.userAgent)
         
         // Stocker la session
-        localStorage.setItem('user', JSON.stringify(user))
+        localStorage.setItem('user', JSON.stringify(result.user))
         localStorage.setItem('isLoggedIn', 'true')
         localStorage.setItem('loginTime', Date.now().toString())
         
@@ -140,45 +161,84 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
           text: "Connexion réussie ! Redirection en cours..."
         })
         
-        // Réinitialiser les tentatives
         setAttempts(0)
+        setErrorCount(0) // Réinitialiser le compteur d'erreurs
         
         setTimeout(() => {
-          onSuccess(user)
+          onSuccess(result.user)
         }, 1500)
-        
       } else {
-        const error = await response.json()
+        // Incrémenter le compteur d'erreurs
+        const newErrorCount = errorCount + 1
+        setErrorCount(newErrorCount)
         
-        // Incrémenter les tentatives
-        const newAttempts = attempts + 1
-        setAttempts(newAttempts)
-        
-        // Bloquer après 3 tentatives échouées
-        if (newAttempts >= 3) {
+        // Bloquer après 2 erreurs
+        if (newErrorCount >= 2) {
           setIsBlocked(true)
           setBlockTimeLeft(300) // 5 minutes
-          startBlockCountdown()
+          
+          // Compte à rebours
+          const countdown = setInterval(() => {
+            setBlockTimeLeft(prev => {
+              if (prev <= 1) {
+                clearInterval(countdown)
+                setIsBlocked(false)
+                setErrorCount(0) // Réinitialiser après déblocage
+                return 0
+              }
+              return prev - 1
+            })
+          }, 1000)
           
           setMessage({
             type: "error",
-            text: "Trop de tentatives échouées. Compte bloqué pendant 5 minutes."
+            text: "Trop de tentatives incorrectes. Compte bloqué pour 5 minutes."
           })
         } else {
           setMessage({
             type: "error",
-            text: error.error || `Identifiants incorrects. Tentative ${newAttempts}/3`
+            text: result.error || "Identifiant ou mot de passe incorrect."
           })
         }
+        
+        setAttempts(prev => prev + 1)
       }
     } catch (error) {
-      setMessage({
-        type: "error",
-        text: "Erreur de connexion. Veuillez réessayer."
-      })
+      // Incrémenter le compteur d'erreurs même en cas d'erreur technique
+      const newErrorCount = errorCount + 1
+      setErrorCount(newErrorCount)
+      
+      if (newErrorCount >= 2) {
+        setIsBlocked(true)
+        setBlockTimeLeft(300)
+        
+        const countdown = setInterval(() => {
+          setBlockTimeLeft(prev => {
+            if (prev <= 1) {
+              clearInterval(countdown)
+              setIsBlocked(false)
+              setErrorCount(0)
+              return 0
+            }
+            return prev - 1
+          })
+        }, 1000)
+        
+        setMessage({
+          type: "error",
+          text: "Trop d'erreurs. Compte bloqué pour 5 minutes."
+        })
+      } else {
+        setMessage({
+          type: "error",
+          text: "Erreur de connexion. Veuillez réessayer."
+        })
+      }
+      
+      setAttempts(prev => prev + 1)
+    } finally {
+      setIsSubmitting(false)
     }
-
-    setIsSubmitting(false)
   }
 
   const startBlockCountdown = () => {
@@ -187,7 +247,7 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
         if (prev <= 1) {
           clearInterval(interval)
           setIsBlocked(false)
-          setAttempts(0)
+          setErrorCount(0) // Réinitialiser après déblocage
           return 0
         }
         return prev - 1
@@ -258,6 +318,19 @@ export function SimpleLogin({ onSuccess, onSwitchToSignup }: SimpleLoginProps) {
             <p className="text-xs text-muted-foreground">
               Entrez votre email (ancien compte) ou votre numéro de téléphone (nouveau compte)
             </p>
+            
+            {/* Domaine récupéré automatiquement */}
+            {userDomain && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-lg"
+              >
+                <p className="text-xs text-blue-700">
+                  <span className="font-medium">Domaine détecté:</span> {userDomain}
+                </p>
+              </motion.div>
+            )}
           </div>
 
           {/* Mot de passe */}
