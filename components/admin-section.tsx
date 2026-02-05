@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ImageUpload } from "@/components/image-upload"
 import { CandidateDetailModal } from "@/components/candidate-detail-modal"
 import { CandidateEditor } from "@/components/candidate-editor"
+import { UserProfileModal } from "@/components/user-profile-modal"
 import type { User, Vote } from "@/hooks/use-api-data"
 import type { Category, Candidate } from "@/lib/categories"
 import { useUsers, useCategories, useCandidates } from "@/hooks/use-api-data"
@@ -74,6 +75,7 @@ export function AdminSection({
   const [showAddCategory, setShowAddCategory] = useState(false)
   const [newCategory, setNewCategory] = useState({ name: "", subtitle: "" })
   const [selectedCandidate, setSelectedCandidate] = useState<{ categoryId: string; candidate: Candidate } | null>(null)
+  const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
   const tabs = [
     { id: "overview" as AdminTab, label: "Aperçu", icon: BarChart3 },
@@ -498,7 +500,7 @@ export function AdminSection({
                           )}
                         </div>
                         <div>
-                          <p className="font-medium flex items-center gap-2">
+                          <p className="font-medium flex items-center gap-2 cursor-pointer hover:text-primary transition-colors" onClick={() => setSelectedUser(user)}>
                             {user.name}
                             {user.role === "SUPER_ADMIN" && (
                               <span className="text-xs bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-full">
@@ -989,6 +991,14 @@ export function AdminSection({
           onClose={() => setSelectedCandidate(null)}
         />
       )}
+
+      {/* User Profile Modal */}
+      <UserProfileModal
+        user={selectedUser}
+        votes={votes}
+        categories={categories}
+        onClose={() => setSelectedUser(null)}
+      />
     </section>
   )
 }
