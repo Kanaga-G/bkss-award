@@ -32,6 +32,14 @@ import { CandidateDetailModal } from "@/components/candidate-detail-modal"
 import { CandidateEditor } from "@/components/candidate-editor"
 import { UserProfileModal } from "@/components/user-profile-modal"
 import { VotingControl } from "@/components/voting-control"
+import { AdminMessagePanel } from "@/components/admin-message-panel"
+import { MessageSquare, ChevronDown } from "lucide-react"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import type { User, Vote } from "@/hooks/use-api-data"
 import type { Category, Candidate } from "@/lib/categories"
 import { useUsers, useCategories, useCandidates } from "@/hooks/use-api-data"
@@ -41,15 +49,21 @@ interface AdminSectionProps {
   leadershipRevealed: boolean
   setLeadershipRevealed: (revealed: boolean) => void
   currentUser: User | null
+  showSuccessAlert?: (message: string) => void
+  showErrorAlert?: (message: string) => void
+  showInfoAlert?: (message: string) => void
 }
 
-type AdminTab = "overview" | "users" | "candidates" | "voting" | "leadership" | "settings"
+type AdminTab = "overview" | "users" | "candidates" | "voting" | "leadership" | "settings" | "messages"
 
 export function AdminSection({
   votes,
   leadershipRevealed,
   setLeadershipRevealed,
   currentUser,
+  showSuccessAlert,
+  showErrorAlert,
+  showInfoAlert,
 }: AdminSectionProps) {
   const { users, createUser, deleteUser, refetch: refetchUsers } = useUsers()
   const { categories, createCategory, deleteCategory, updateCategory, refetch: refetchCategories } = useCategories()
@@ -77,6 +91,7 @@ export function AdminSection({
   const [newCategory, setNewCategory] = useState({ name: "", subtitle: "" })
   const [selectedCandidate, setSelectedCandidate] = useState<{ categoryId: string; candidate: Candidate } | null>(null)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [showQuickActions, setShowQuickActions] = useState(false)
 
   const tabs = [
     { id: "overview" as AdminTab, label: "Aperçu", icon: BarChart3 },
@@ -84,6 +99,7 @@ export function AdminSection({
     { id: "candidates" as AdminTab, label: "Candidats", icon: Trophy },
     { id: "voting" as AdminTab, label: "Votes", icon: Lock },
     { id: "leadership" as AdminTab, label: "Prix Leadership", icon: Crown },
+    { id: "messages" as AdminTab, label: "Messages", icon: MessageSquare },
     { id: "settings" as AdminTab, label: "Paramètres", icon: Settings },
   ]
 
@@ -764,7 +780,7 @@ export function AdminSection({
                 </div>
 
                 <div className="bg-card rounded-xl p-6 mb-6">
-                  <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center justify-center mb-4">
                     <div>
                       <p className="font-semibold">État de visibilité</p>
                       <p className="text-sm text-muted-foreground">
@@ -773,26 +789,63 @@ export function AdminSection({
                           : "Le prix est masqué en attendant la révélation officielle"}
                       </p>
                     </div>
-                    <Button
-                      onClick={() => setLeadershipRevealed(!leadershipRevealed)}
-                      className={
-                        leadershipRevealed
-                          ? "bg-muted text-foreground hover:bg-muted/80"
-                          : "bg-gradient-to-r from-amber-500 to-orange-600 text-white"
-                      }
-                    >
-                      {leadershipRevealed ? (
-                        <>
-                          <EyeOff className="w-4 h-4 mr-2" />
-                          Masquer le Prix
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-4 h-4 mr-2" />
-                          Révéler le Prix
-                        </>
-                      )}
-                    </Button>
+                  </div>
+
+                  {/* Bouton principal centré avec dropdown */}
+                  <div className="flex justify-center mb-4">
+                    <div className="relative">
+                      <Button
+                        onClick={() => setLeadershipRevealed(!leadershipRevealed)}
+                        className={
+                          leadershipRevealed
+                            ? "bg-muted text-foreground hover:bg-muted/80"
+                            : "bg-gradient-to-r from-amber-500 to-orange-600 text-white"
+                        }
+                      >
+                        {leadershipRevealed ? (
+                          <>
+                            <EyeOff className="w-4 h-4 mr-2" />
+                            Masquer le Prix
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Révéler le Prix
+                          </>
+                        )}
+                      </Button>
+                      
+                      {/* Dropdown d'actions rapides */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="absolute -right-12 top-1/2 -translate-y-1/2 w-8 h-8 p-0"
+                          >
+                            <ChevronDown className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem onClick={() => setActiveTab("overview")}>
+                            <BarChart3 className="w-4 h-4 mr-2" />
+                            Aperçu
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setActiveTab("voting")}>
+                            <Lock className="w-4 h-4 mr-2" />
+                            Contrôle Votes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setActiveTab("messages")}>
+                            <MessageSquare className="w-4 h-4 mr-2" />
+                            Messages
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setActiveTab("settings")}>
+                            <Settings className="w-4 h-4 mr-2" />
+                            Paramètres
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
 
                   {!leadershipRevealed && (
@@ -892,6 +945,23 @@ export function AdminSection({
                   </div>
                 </div>
               </div>
+            </motion.div>
+          )}
+
+          {/* Messages Tab */}
+          {activeTab === "messages" && (
+            <motion.div
+              key="messages"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="space-y-6"
+            >
+              <AdminMessagePanel 
+                showSuccessAlert={showSuccessAlert}
+                showErrorAlert={showErrorAlert}
+                showInfoAlert={showInfoAlert}
+              />
             </motion.div>
           )}
 

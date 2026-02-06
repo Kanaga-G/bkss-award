@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import bcrypt from 'bcryptjs'
+import { getClientIP, checkDeviceAccountLimit, recordDeviceRegistration } from '@/lib/device-tracking'
 
 // GET - Récupérer tous les utilisateurs ou recherche par email/téléphone
 export async function GET(request: NextRequest) {
@@ -34,11 +35,39 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, email, phone, password, role = 'VOTER', domain, city } = body
+    const { 
+      name, 
+      email, 
+      phone, 
+      password, 
+      role = 'VOTER', 
+      domain, 
+      city, 
+      device_id,
+      email_verified = false 
+    } = body
 
     // Validation - accepte soit email soit téléphone
     if (!name || (!email && !phone)) {
       return NextResponse.json({ error: 'Nom et email ou téléphone requis' }, { status: 400 })
+    }
+
+    // Obtenir l'IP client
+    const clientIP = await getClientIP(request)
+
+    // Vérifier les limites de device/IP si device_id est fourni
+    if (device_id) {
+      const { canCreate, existingAccounts } = await checkDeviceAccountLimit(
+        supabaseAdmin,
+        device_id,
+        clientIP
+      )
+
+      if (!canCreate) {
+        return NextResponse.json({ 
+          error: `Limite de comptes atteinte. Ce device/IP a déjà créé ${existingAccounts} compte(s). Maximum autorisé: 1 par device, 3 par IP.` 
+        }, { status: 429 })
+      }
     }
 
     // Vérifier si l'email existe déjà (si fourni)
@@ -76,7 +105,7 @@ export async function POST(request: NextRequest) {
     // Générer un email fictif si aucun email n'est fourni (pour les comptes téléphone uniquement)
     const finalEmail = email || `user_${Date.now()}@bankassawards.local`
     
-    // Créer l'utilisateur
+    // Créer l'utilisateur avec les informations de tracking
     const { data, error } = await supabaseAdmin
       .from('users')
       .insert({
@@ -86,7 +115,11 @@ export async function POST(request: NextRequest) {
         password: hashedPassword,
         role,
         domain,
-        city
+        city,
+        device_id: device_id || null,
+        registration_ip: clientIP,
+        user_agent: request.headers.get('user-agent') || null,
+        email_verified: email_verified
       })
       .select()
       .single()
@@ -95,8 +128,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // Enregistrer les informations de device si disponible
+    if (device_id && data?.id) {
+      await recordDeviceRegistration(
+        supabaseAdmin,
+        data.id,
+        device_id,
+        clientIP,
+        request.headers.get('user-agent') || ''
+      )
+    }
+
     return NextResponse.json(data, { status: 201 })
   } catch (error) {
+    console.error('Erreur lors de la création de l\'utilisateur:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }

@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { SimpleLogin } from "@/components/simple-login"
 import { SimpleSignup } from "@/components/simple-signup"
 import { useUsers } from "@/hooks/use-api-data"
+import { Mail } from "lucide-react"
+import Link from "next/link"
 import type { User } from "@/hooks/use-api-data"
 
 interface AuthSectionProps {
@@ -15,6 +17,17 @@ interface AuthSectionProps {
 export function AuthSection({ setCurrentPage, setCurrentUser }: AuthSectionProps) {
   const [activeTab, setActiveTab] = useState<"login" | "signup">("login")
   const { users } = useUsers()
+
+  useEffect(() => {
+    // Vérifier si l'URL contient tab=signup
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const tab = urlParams.get('tab')
+      if (tab === 'signup') {
+        setActiveTab('signup')
+      }
+    }
+  }, [])
 
   const handleAuthSuccess = (user: User) => {
     setCurrentUser(user)
@@ -70,6 +83,17 @@ export function AuthSection({ setCurrentPage, setCurrentUser }: AuthSectionProps
           )}
         </motion.div>
       </AnimatePresence>
+
+      {/* Lien de vérification d'email */}
+      <div className="mt-6 text-center">
+        <Link 
+          href="/auth/verify-email"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+        >
+          <Mail className="w-4 h-4" />
+          Vérifier mon adresse email
+        </Link>
+      </div>
     </div>
   )
 }

@@ -329,6 +329,34 @@ export function useVotes() {
   return { votes, loading, error, refetch: fetchVotes, createVote }
 }
 
+// Hook pour la configuration de vote
+export function useVotingConfig() {
+  const [config, setConfig] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchConfig = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const response = await fetch('/api/voting-config')
+      if (!response.ok) throw new Error('Erreur lors de la récupération de la configuration')
+      const data = await response.json()
+      setConfig(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur inconnue')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchConfig()
+  }, [fetchConfig])
+
+  return { config, loading, error, refetch: fetchConfig }
+}
+
 // Hook pour l'utilisateur actuel avec Supabase Auth
 export function useCurrentUser() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)

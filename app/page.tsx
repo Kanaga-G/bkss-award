@@ -9,6 +9,7 @@ import { VoteSection } from "@/components/vote-section"
 import { ResultsSection } from "@/components/results-section"
 import { AdminSection } from "@/components/admin-section"
 import { UserProfile } from "@/components/user-profile"
+import { SiteAlert, useSiteAlerts } from "@/components/site-alert"
 // import { AccessBlocked } from "@/components/access-blocked"
 import { useUsers, useCategories, useVotes, useCurrentUser } from "@/hooks/use-api-data"
 // import { isAccessBlockedServer, isAccessBlocked } from "@/lib/access-control"
@@ -35,8 +36,20 @@ const DEFAULT_SUPER_ADMIN: User = {
 
 export default function BankassAwards() {
   const [currentPage, setCurrentPage] = useState<Page>(() => {
-    // Récupérer la page sauvegardée depuis localStorage
+    // Récupérer la page sauvegardée depuis localStorage ou l'URL
     if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const tab = urlParams.get('tab')
+      const page = urlParams.get('page')
+      
+      // Priorité à l'URL, puis localStorage, puis défaut
+      if (page) {
+        return page as Page
+      }
+      if (tab === 'signup') {
+        return "auth"
+      }
+      
       const savedPage = localStorage.getItem("currentPage") as Page
       return savedPage || "home"
     }
@@ -46,10 +59,37 @@ export default function BankassAwards() {
   const { users, loading: usersLoading } = useUsers()
   const { categories, loading: categoriesLoading, refetch: refetchCategories } = useCategories()
   const { votes, loading: votesLoading, refetch: refetchVotes } = useVotes()
+  const { alerts, showVoteBlockedAlert, showSuccessAlert, showErrorAlert, showInfoAlert } = useSiteAlerts()
   const [theme, setTheme] = useState<"light" | "dark">("dark")
-  const [leadershipRevealed, setLeadershipRevealed] = useState<boolean>(false)
+  const [leadershipRevealed, setLeadershipRevealed] = useState<boolean>(() => {
+    // Récupérer le statut de révélation du leadership depuis localStorage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("leadershipRevealed")
+      return saved ? JSON.parse(saved) : false
+    }
+    return false
+  })
   const [isMounted, setIsMounted] = useState(false)
   const [autoRefresh, setAutoRefresh] = useState(true)
+  // État pour le statut des votes (persisté côté client)
+  const [votingStatus, setVotingStatus] = useState<{
+    isVotingOpen: boolean
+    blockMessage?: string
+    lastChecked: number
+  }>(() => {
+    // Récupérer le statut des votes depuis localStorage
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem("votingStatus")
+      if (saved) {
+        return JSON.parse(saved)
+      }
+    }
+    return {
+      isVotingOpen: true,
+      blockMessage: "",
+      lastChecked: Date.now()
+    }
+  })
   // const [accessBlocked, setAccessBlocked] = useState(false)
 
   // Gérer le contrôle d'accès côté client pour éviter l'hydratation
@@ -96,6 +136,57 @@ export default function BankassAwards() {
       localStorage.setItem("currentPage", currentPage)
     }
   }, [currentPage])
+
+  // Persister le statut de révélation du leadership
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("leadershipRevealed", JSON.stringify(leadershipRevealed))
+    }
+  }, [leadershipRevealed])
+
+  // Persister le statut des votes
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem("votingStatus", JSON.stringify(votingStatus))
+    }
+  }, [votingStatus])
+
+  // Vérifier le statut des votes périodiquement (toutes les 30 secondes)
+  useEffect(() => {
+    const checkVotingStatus = async () => {
+      try {
+        const response = await fetch('/api/voting-config')
+        const data = await response.json()
+        
+        const newStatus = {
+          isVotingOpen: data.isVotingOpen,
+          blockMessage: data.blockMessage || "",
+          lastChecked: Date.now()
+        }
+
+        // Ne mettre à jour que si le statut a changé
+        if (JSON.stringify(newStatus) !== JSON.stringify(votingStatus)) {
+          setVotingStatus(newStatus)
+          
+          // Afficher une alerte si les votes viennent d'être bloqués/débloqués
+          if (!newStatus.isVotingOpen && votingStatus.isVotingOpen) {
+            showVoteBlockedAlert(newStatus.blockMessage)
+          } else if (newStatus.isVotingOpen && !votingStatus.isVotingOpen) {
+            showSuccessAlert("Les votes sont maintenant ouverts !")
+          }
+        }
+      } catch (error) {
+        console.error('Erreur vérification statut votes:', error)
+      }
+    }
+
+    // Vérifier immédiatement
+    checkVotingStatus()
+    
+    // Puis vérifier toutes les 30 secondes
+    const interval = setInterval(checkVotingStatus, 30000)
+    return () => clearInterval(interval)
+  }, [votingStatus, showVoteBlockedAlert, showSuccessAlert])
 
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light")
@@ -166,6 +257,8 @@ export default function BankassAwards() {
               setCurrentPage={(page) => setCurrentPage(page as Page)}
               categories={categories}
               leadershipRevealed={leadershipRevealed}
+              votingStatus={votingStatus}
+              onShowVoteBlockedAlert={showVoteBlockedAlert}
             />
           )}
           {currentPage === "results" && (
@@ -190,10 +283,20 @@ export default function BankassAwards() {
               leadershipRevealed={leadershipRevealed}
               setLeadershipRevealed={setLeadershipRevealed}
               currentUser={currentUser}
+              showSuccessAlert={showSuccessAlert}
+              showErrorAlert={showErrorAlert}
+              showInfoAlert={showInfoAlert}
             />
           )}
         </motion.main>
       </AnimatePresence>
+
+      {/* Site Alerts */}
+      <SiteAlert 
+        alerts={alerts} 
+        position="top"
+        className="px-4 max-w-md"
+      />
 
       {isMounted && (
         <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">

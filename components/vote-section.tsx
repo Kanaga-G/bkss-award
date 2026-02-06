@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { Check, Vote as VoteIcon, AlertCircle, Trophy, Sparkles, ChevronDown, X, Lock, Crown } from "lucide-react"
+import { Trophy, AlertTriangle, CheckCircle, XCircle, Info, Crown, Lock, Check, ChevronDown, Vote as VoteIcon, Sparkles, X, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { AudioPreview } from "@/components/audio-preview"
-import { VotingBlockedAlert } from "@/components/voting-blocked-alert"
-import { VotingBlockedHeaderAlert } from "@/components/platform-alert"
-import type { User, Vote } from "@/hooks/use-api-data"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { useVotingConfig } from "@/hooks/use-api-data"
 import type { Category, Candidate } from "@/lib/categories"
+import type { User, Vote } from "@/hooks/use-api-data"
 import { useVotes } from "@/hooks/use-api-data"
 
 import type { Page } from "@/app/page"
@@ -18,6 +18,12 @@ interface VoteSectionProps {
   setCurrentPage: (page: Page) => void
   categories: Category[]
   leadershipRevealed: boolean
+  votingStatus?: {
+    isVotingOpen: boolean
+    blockMessage?: string
+    lastChecked: number
+  }
+  onShowVoteBlockedAlert?: (message?: string) => void
 }
 
 export function VoteSection({
@@ -25,6 +31,8 @@ export function VoteSection({
   setCurrentPage,
   categories,
   leadershipRevealed,
+  votingStatus,
+  onShowVoteBlockedAlert,
 }: VoteSectionProps) {
   const { votes, refetch: refetchVotes } = useVotes()
   const [selectedCandidates, setSelectedCandidates] = useState<Record<string, { id: string; name: string }>>({})
@@ -43,7 +51,7 @@ export function VoteSection({
           className="text-center max-w-md"
         >
           <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-6">
-            <AlertCircle className="w-10 h-10 text-primary" />
+            <Info className="w-10 h-10 text-primary" />
           </div>
           <h2 className="text-2xl font-bold mb-3">Connexion requise</h2>
           <p className="text-muted-foreground mb-6">
@@ -129,39 +137,22 @@ export function VoteSection({
     }))
   }
 
-  // Vérifier l'état des votes au montage
+  // Utiliser le statut persistant des votes
   useEffect(() => {
-    const checkVotingStatus = async () => {
-      try {
-        const response = await fetch('/api/voting-config')
-        const data = await response.json()
-        setVotingBlocked(!data.isVotingOpen)
-        setBlockMessage(data.blockMessage || "Les votes sont actuellement fermés.")
-      } catch (error) {
-        console.error('Erreur lors de la vérification du statut des votes:', error)
+    if (votingStatus) {
+      const isBlocked = !votingStatus.isVotingOpen
+      setVotingBlocked(isBlocked)
+      setBlockMessage(votingStatus.blockMessage || "")
+      
+      // Afficher l'alerte de site si les votes sont bloqués
+      if (isBlocked && onShowVoteBlockedAlert) {
+        onShowVoteBlockedAlert(votingStatus.blockMessage)
       }
     }
-
-    checkVotingStatus()
-    // Vérifier toutes les 30 secondes
-    const interval = setInterval(checkVotingStatus, 30000)
-    return () => clearInterval(interval)
-  }, [])
+  }, [votingStatus, onShowVoteBlockedAlert])
 
   return (
     <section className="py-12 px-4">
-      {/* Alerte de plateforme pour votes bloqués */}
-      {votingBlocked && <VotingBlockedHeaderAlert />}
-      
-      {/* Alerte de votes bloqués (flottante) */}
-      {votingBlocked && (
-        <VotingBlockedAlert 
-          blockMessage={blockMessage}
-          onRetry={() => window.location.reload()}
-          showRetry={true}
-        />
-      )}
-
       <div className="max-w-6xl mx-auto">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
           <h1 className="text-3xl sm:text-4xl font-bold mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -342,11 +333,10 @@ export function VoteSection({
                                 <div className="p-3 space-y-2">
                                   {/* Audio Preview */}
                                   {candidate.audioFile && (
-                                    <AudioPreview
-                                      audioUrl={candidate.audioFile}
-                                      songTitle={candidate.candidateSong}
-                                      artistName={candidate.name}
-                                    />
+                                    <div className="bg-muted rounded-lg p-3 text-center">
+                                      <p className="text-sm font-medium">Audio disponible</p>
+                                      <p className="text-xs text-muted-foreground">{candidate.candidateSong}</p>
+                                    </div>
                                   )}
                                   <Button
                                     type="button"
@@ -589,11 +579,10 @@ export function VoteSection({
                       
                       {/* Audio Preview */}
                       {selectedProfile.candidate.audioFile && (
-                        <AudioPreview
-                          audioUrl={selectedProfile.candidate.audioFile}
-                          songTitle={selectedProfile.candidate.candidateSong}
-                          artistName={selectedProfile.candidate.name}
-                        />
+                        <div className="bg-muted rounded-lg p-3 text-center">
+                          <p className="text-sm font-medium">Audio disponible</p>
+                          <p className="text-xs text-muted-foreground">{selectedProfile.candidate.candidateSong}</p>
+                        </div>
                       )}
                     </div>
                   )}

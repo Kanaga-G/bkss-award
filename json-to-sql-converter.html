@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JSON Data to SQL Converter - Bankass Awards</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; text-align: center; margin-bottom: 30px; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 5px; background: #fafafa; }
+        h2 { color: #555; margin-bottom: 15px; }
+        textarea { width: 100%; height: 150px; margin: 10px 0; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-family: monospace; font-size: 12px; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; }
+        button { background: #007bff; color: white; padding: 12px 20px; border: none; cursor: pointer; border-radius: 5px; font-weight: bold; transition: background 0.3s; }
+        button:hover { background: #0056b3; }
+        button.success { background: #28a745; }
+        button.success:hover { background: #1e7e34; }
+        button.warning { background: #ffc107; color: #333; }
+        button.warning:hover { background: #e0a800; }
+        button.danger { background: #dc3545; }
+        button.danger:hover { background: #c82333; }
+        .output { background: #f8f9fa; padding: 20px; border-radius: 5px; white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 12px; max-height: 400px; overflow-y: auto; border: 1px solid #ddd; }
+        .stats { background: #e9ecef; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        .stat-item { text-align: center; padding: 10px; background: white; border-radius: 5px; }
+        .stat-number { font-size: 24px; font-weight: bold; color: #007bff; }
+        .stat-label { font-size: 12px; color: #666; }
+        .instructions { background: #d1ecf1; padding: 15px; border-radius: 5px; border-left: 4px solid #0c5460; margin: 20px 0; }
+        .error { background: #f8d7da; padding: 15px; border-radius: 5px; border-left: 4px solid #721c24; margin: 10px 0; color: #721c24; }
+        .success { background: #d4edda; padding: 15px; border-radius: 5px; border-left: 4px solid #155724; margin: 10px 0; color: #155724; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Tables + Data SQL Converter</h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Générez les CREATE TABLE et transformez vos données JSON en INSERT SQL pour Supabase<br>
+            <small>Séparation complète : création des tables + import des données</small>
+        </p>
+        
+        <div class="instructions">
+            <h3>📋 Instructions</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <h4>🏗️ Étape A: Création des Tables</h4>
+                    <ol>
+                        <li>Cliquez sur "🏗️ Générer CREATE TABLE"</li>
+                        <li>Copiez le SQL de création des tables</li>
+                        <li>Exécutez-le d'abord dans Supabase</li>
+                        <li>Vérifiez que tout est créé</li>
+                    </ol>
+                </div>
+                <div>
+                    <h4>📥 Étape B: Import des Données</h4>
+                    <ol>
+                        <li>Collez votre JSON ci-dessous</li>
+                        <li>Cliquez sur "🔄 Générer INSERT DATA"</li>
+                        <li>Copiez le SQL des données</li>
+                        <li>Exécutez-le après la création</li>
+                    </ol>
+                </div>
+            </div>
+            <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border-radius: 5px;">
+                <strong>⚠️ Important:</strong> Exécutez TOUJOURS la création des tables en premier !
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>🏗️ Section A: Création des Tables</h2>
+            <div class="button-group">
+                <button onclick="generateAllTables()" class="success">🏗️ Générer CREATE TABLE</button>
+                <button onclick="generateUsersTable()" class="primary">👥 Users Table</button>
+                <button onclick="generateCategoriesTable()" class="primary">🎭 Categories Table</button>
+                <button onclick="generateCandidatesTable()" class="primary">🎤 Candidates Table</button>
+                <button onclick="generateVotesTable()" class="primary">🗳️ Votes Table</button>
+                <button onclick="generateNotificationsTable()" class="primary">🔔 Notifications Table</button>
+                <button onclick="generateAdminMessagesTable()" class="warning">📨 Admin Messages Table</button>
+                <button onclick="generateVotingConfigTable()" class="warning">⚙️ Voting Config Table</button>
+            </div>
+            <div id="tablesOutput" class="output" style="background: #f0f8ff; border-color: #007bff;">Le SQL de création des tables apparaîtra ici...</div>
+            <div class="button-group">
+                <button onclick="copyTablesSQL()" class="success">📋 Copier CREATE TABLE</button>
+                <button onclick="clearTablesSQL()" class="danger">🗑️ Effacer</button>
+                <button onclick="downloadTablesSQL()" class="primary">💾 Télécharger</button>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📋 Étape 1: Collez votre JSON (pour les données)</h2>
+            <textarea id="jsonInput" placeholder="Collez ici votre fichier JSON complet..."></textarea>
+            <div id="jsonError" class="error" style="display: none;"></div>
+        </div>
+        
+        <div class="section">
+            <h2>� Section B: Import des Données</h2>
+            <div class="button-group">
+                <button onclick="convertAll()" class="success">🔄 Générer INSERT DATA</button>
+                <button onclick="convertUsers()" class="primary">👥 Users Data</button>
+                <button onclick="convertCategories()" class="primary">🎭 Categories Data</button>
+                <button onclick="convertCandidates()" class="primary">🎤 Candidates Data</button>
+                <button onclick="convertVotes()" class="primary">🗳️ Votes Data</button>
+                <button onclick="convertNotifications()" class="primary">🔔 Notifications Data</button>
+                <button onclick="convertAdminMessages()" class="warning">📨 Admin Messages Data</button>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📊 Statistiques des Données</h2>
+            <div id="stats" class="stats" style="display: none;">
+                <div class="stats-grid" id="statsGrid">
+                    <!-- Stats will be populated here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📋 Étape 2: SQL des Données Généré</h2>
+            <div id="sqlOutput" class="output">Le SQL des données apparaîtra ici...</div>
+            <div class="button-group">
+                <button onclick="copySQL()" class="success">📋 Copier INSERT DATA</button>
+                <button onclick="clearSQL()" class="danger">🗑️ Effacer</button>
+                <button onclick="downloadSQL()" class="primary">💾 Télécharger</button>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📋 Étape 3: Exécution dans Supabase</h2>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div style="padding: 15px; background: #d4edda; border-radius: 5px; border-left: 4px solid #28a745;">
+                    <h4>✅ Section A - Tables</h4>
+                    <ol>
+                        <li>Allez sur <a href="https://supabase.com/dashboard" target="_blank">Supabase Dashboard</a></li>
+                        <li>Sélectionnez votre projet Bankass Awards</li>
+                        <li>Allez dans "SQL Editor"</li>
+                        <li>Collez le SQL de création des tables</li>
+                        <li>Cliquez sur "Run" - Vérifiez que tout est créé</li>
+                    </ol>
+                </div>
+                <div style="padding: 15px; background: #cce5ff; border-radius: 5px; border-left: 4px solid #004085;">
+                    <h4>📥 Section B - Données</h4>
+                    <ol>
+                        <li>Restez dans le même "SQL Editor"</li>
+                        <li>Collez le SQL des données (INSERT)</li>
+                        <li>Cliquez sur "Run" pour insérer les données</li>
+                        <li>Vérifiez les statistiques d'import</li>
+                    </ol>
+                </div>
+            </div>
+            <div style="margin-top: 15px; padding: 10px; background: #f8d7da; border-radius: 5px; border-left: 4px solid #721c24;">
+                <strong>🚨 Ordre Important:</strong> Exécutez TOUJOURS les CREATE TABLE avant les INSERT DATA !
+            </div>
+        </div>
+    </div>
+
+<script>
+let currentData = null;
+
+// ========================================
+// 🏗️ FONCTIONS DE GÉNÉRATION DES TABLES
+// ========================================
+
+function generateAllTables() {
+    let sql = '-- 🏗️ CRÉATION COMPLÈTE DES TABLES - BANKASS AWARDS\n';
+    sql += `-- Généré le: ${new Date().toISOString()}\n\n`;
+    
+    sql += generateUsersTableSQL();
+    sql += generateCategoriesTableSQL();
+    sql += generateCandidatesTableSQL();
+    sql += generateVotesTableSQL();
+    sql += generateNotificationsTableSQL();
+    sql += generateAdminMessagesTableSQL();
+    sql += generateVotingConfigTableSQL();
+    
+    sql += '-- ========================================\n';
+    sql += '-- ✅ Toutes les tables créées avec succès !\n';
+    sql += '-- 🚀 Prêt pour l\'import des données\n';
+    sql += '-- ========================================\n';
+    
+    document.getElementById('tablesOutput').textContent = sql;
+}
+
+function generateUsersTable() {
+    document.getElementById('tablesOutput').textContent = generateUsersTableSQL();
+}
+
+function generateCategoriesTable() {
+    document.getElementById('tablesOutput').textContent = generateCategoriesTableSQL();
+}
+
+function generateCandidatesTable() {
+    document.getElementById('tablesOutput').textContent = generateCandidatesTableSQL();
+}
+
+function generateVotesTable() {
+    document.getElementById('tablesOutput').textContent = generateVotesTableSQL();
+}
+
+function generateNotificationsTable() {
+    document.getElementById('tablesOutput').textContent = generateNotificationsTableSQL();
+}
+
+function generateAdminMessagesTable() {
+    document.getElementById('tablesOutput').textContent = generateAdminMessagesTableSQL();
+}
+
+function generateVotingConfigTable() {
+    document.getElementById('tablesOutput').textContent = generateVotingConfigTableSQL();
+}
+
+// Fonctions SQL individuelles
+function generateUsersTableSQL() {
+    return `-- 👥 TABLE USERS
+CREATE TABLE IF NOT EXISTS users (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    role VARCHAR(50) DEFAULT 'VOTER' CHECK (role IN ('VOTER', 'SUPER_ADMIN')),
+    phone VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index pour optimisation
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+
+`;
+}
+
+function generateCategoriesTableSQL() {
+    return `-- 🎭 TABLE CATEGORIES
+CREATE TABLE IF NOT EXISTS categories (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index pour optimisation
+CREATE INDEX IF NOT EXISTS idx_categories_name ON categories(name);
+
+`;
+}
+
+function generateCandidatesTableSQL() {
+    return `-- 🎤 TABLE CANDIDATES
+CREATE TABLE IF NOT EXISTS candidates (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    bio TEXT,
+    image_url TEXT,
+    audio_file TEXT,
+    candidate_song VARCHAR(255),
+    category_id UUID REFERENCES categories(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index pour optimisation
+CREATE INDEX IF NOT EXISTS idx_candidates_category_id ON candidates(category_id);
+
+`;
+}
+
+function generateVotesTableSQL() {
+    return `-- 🗳️ TABLE VOTES
+CREATE TABLE IF NOT EXISTS votes (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    category_id UUID REFERENCES categories(id) ON DELETE CASCADE,
+    candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(user_id, category_id) -- Un vote par utilisateur par catégorie
+);
+
+-- Index pour optimisation
+CREATE INDEX IF NOT EXISTS idx_votes_user_id ON votes(user_id);
+CREATE INDEX IF NOT EXISTS idx_votes_category_id ON votes(category_id);
+
+`;
+}
+
+function generateNotificationsTableSQL() {
+    return `-- 🔔 TABLE NOTIFICATIONS
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) DEFAULT 'info' CHECK (type IN ('info', 'warning', 'success', 'error')),
+    read BOOLEAN DEFAULT false,
+    admin_message_id UUID,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index pour optimisation
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
+
+`;
+}
+
+function generateAdminMessagesTableSQL() {
+    return `-- 📨 TABLE ADMIN_MESSAGES
+CREATE TABLE IF NOT EXISTS admin_messages (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) DEFAULT 'info' CHECK (type IN ('info', 'warning', 'success', 'error')),
+    target_users TEXT DEFAULT 'all',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Index pour optimisation
+CREATE INDEX IF NOT EXISTS idx_admin_messages_created_at ON admin_messages(created_at DESC);
+
+`;
+}
+
+function generateVotingConfigTableSQL() {
+    return `-- ⚙️ TABLE VOTING_CONFIG
+CREATE TABLE IF NOT EXISTS voting_config (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    is_voting_open BOOLEAN DEFAULT false,
+    block_message TEXT DEFAULT 'Les votes ne sont pas encore ouverts.',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+`;
+}
+
+// Fonctions pour la section tables
+function copyTablesSQL() {
+    const sqlText = document.getElementById('tablesOutput').textContent;
+    if (!sqlText || sqlText === 'Le SQL de création des tables apparaîtra ici...') {
+        alert('❌ Aucun SQL de tables à copier');
+        return;
+    }
+    
+    navigator.clipboard.writeText(sqlText).then(() => {
+        alert('✅ SQL des tables copié dans le presse-papiers !');
+    }).catch(err => {
+        alert('❌ Erreur lors de la copie: ' + err);
+    });
+}
+
+function clearTablesSQL() {
+    document.getElementById('tablesOutput').textContent = 'Le SQL de création des tables apparaîtra ici...';
+}
+
+function downloadTablesSQL() {
+    const sqlText = document.getElementById('tablesOutput').textContent;
+    if (!sqlText || sqlText === 'Le SQL de création des tables apparaîtra ici...') {
+        alert('❌ Aucun SQL de tables à télécharger');
+        return;
+    }
+    
+    const blob = new Blob([sqlText], { type: 'text/sql' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bankass_create_tables_${new Date().toISOString().split('T')[0]}.sql`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// ========================================
+// 📥 FONCTIONS DE CONVERSION DES DONNÉES
+// ========================================
+
+function validateJSON() {
+    const jsonInput = document.getElementById('jsonInput').value;
+    const jsonError = document.getElementById('jsonError');
+    
+    if (!jsonInput.trim()) {
+        jsonError.style.display = 'none';
+        return false;
+    }
+    
+    try {
+        currentData = JSON.parse(jsonInput);
+        jsonError.style.display = 'none';
+        showStats();
+        return true;
+    } catch (e) {
+        jsonError.textContent = '❌ Erreur JSON: ' + e.message;
+        jsonError.style.display = 'block';
+        currentData = null;
+        hideStats();
+        return false;
+    }
+}
+
+function showStats() {
+    if (!currentData) return;
+    
+    const stats = document.getElementById('stats');
+    const statsGrid = document.getElementById('statsGrid');
+    
+    const statsData = [
+        { label: '👥 Users', count: currentData.users ? currentData.users.length : 0 },
+        { label: '🎭 Categories', count: currentData.categories ? currentData.categories.length : 0 },
+        { label: '🎤 Candidates', count: currentData.candidates ? currentData.candidates.length : 0 },
+        { label: '🗳️ Votes', count: currentData.votes ? currentData.votes.length : 0 },
+        { label: '🔔 Notifications', count: currentData.notifications ? currentData.notifications.length : 0 },
+        { label: '📨 Admin Messages', count: currentData.admin_messages ? currentData.admin_messages.length : 0 }
+    ];
+    
+    statsGrid.innerHTML = statsData.map(stat => `
+        <div class="stat-item">
+            <div class="stat-number">${stat.count}</div>
+            <div class="stat-label">${stat.label}</div>
+        </div>
+    `).join('');
+    
+    stats.style.display = 'block';
+}
+
+function hideStats() {
+    document.getElementById('stats').style.display = 'none';
+}
+
+function escapeSQL(str) {
+    if (!str) return '';
+    return String(str).replace(/'/g, "''");
+}
+
+function convertUsers() {
+    if (!validateJSON()) return;
+    
+    const users = currentData.users || [];
+    if (users.length === 0) {
+        document.getElementById('sqlOutput').textContent = '-- 👥 Aucun utilisateur à importer';
+        return;
+    }
+    
+    let sql = '-- 👥 Import des Users\n';
+    sql += 'INSERT INTO users (id, name, email, role, phone, created_at, updated_at) VALUES\n';
+    
+    const values = users.map(user => 
+        `('${user.id}', '${escapeSQL(user.name)}', '${user.email}', '${user.role}', '${escapeSQL(user.phone || '')}', '${user.created_at}', '${user.updated_at}')`
+    );
+    
+    sql += values.join(',\n');
+    sql += ';\n\n';
+    
+    document.getElementById('sqlOutput').textContent = sql;
+}
+
+function convertCategories() {
+    if (!validateJSON()) return;
+    
+    const categories = currentData.categories || [];
+    if (categories.length === 0) {
+        document.getElementById('sqlOutput').textContent = '-- 🎭 Aucune catégorie à importer';
+        return;
+    }
+    
+    let sql = '-- 🎭 Import des Categories\n';
+    sql += 'INSERT INTO categories (id, name, description, created_at, updated_at) VALUES\n';
+    
+    const values = categories.map(cat => 
+        `('${cat.id}', '${escapeSQL(cat.name)}', '${escapeSQL(cat.description || '')}', '${cat.created_at}', '${cat.updated_at}')`
+    );
+    
+    sql += values.join(',\n');
+    sql += ';\n\n';
+    
+    document.getElementById('sqlOutput').textContent = sql;
+}
+
+function convertCandidates() {
+    if (!validateJSON()) return;
+    
+    const candidates = currentData.candidates || [];
+    if (candidates.length === 0) {
+        document.getElementById('sqlOutput').textContent = '-- 🎤 Aucun candidat à importer';
+        return;
+    }
+    
+    let sql = '-- 🎤 Import des Candidates\n';
+    sql += 'INSERT INTO candidates (id, name, bio, image_url, audio_file, candidate_song, category_id, created_at, updated_at) VALUES\n';
+    
+    const values = candidates.map(candidate => 
+        `('${candidate.id}', '${escapeSQL(candidate.name)}', '${escapeSQL(candidate.bio || '')}', '${escapeSQL(candidate.image_url || '')}', '${escapeSQL(candidate.audio_file || '')}', '${escapeSQL(candidate.candidate_song || '')}', '${candidate.category_id}', '${candidate.created_at}', '${candidate.updated_at}')`
+    );
+    
+    sql += values.join(',\n');
+    sql += ';\n\n';
+    
+    document.getElementById('sqlOutput').textContent = sql;
+}
+
+function convertVotes() {
+    if (!validateJSON()) return;
+    
+    const votes = currentData.votes || [];
+    if (votes.length === 0) {
+        document.getElementById('sqlOutput').textContent = '-- 🗳️ Aucun vote à importer';
+        return;
+    }
+    
+    let sql = '-- 🗳️ Import des Votes\n';
+    sql += 'INSERT INTO votes (id, user_id, category_id, candidate_id, created_at, updated_at) VALUES\n';
+    
+    const values = votes.map(vote => 
+        `('${vote.id}', '${vote.user_id}', '${vote.category_id}', '${vote.candidate_id}', '${vote.created_at}', '${vote.updated_at}')`
+    );
+    
+    sql += values.join(',\n');
+    sql += ';\n\n';
+    
+    document.getElementById('sqlOutput').textContent = sql;
+}
+
+function convertNotifications() {
+    if (!validateJSON()) return;
+    
+    const notifications = currentData.notifications || [];
+    if (notifications.length === 0) {
+        document.getElementById('sqlOutput').textContent = '-- 🔔 Aucune notification à importer';
+        return;
+    }
+    
+    let sql = '-- 🔔 Import des Notifications\n';
+    sql += 'INSERT INTO notifications (id, user_id, title, message, type, read, admin_message_id, created_at, updated_at) VALUES\n';
+    
+    const values = notifications.map(notif => {
+        const readValue = notif.read ? 'true' : 'false';
+        const adminMsgId = notif.admin_message_id ? `'${notif.admin_message_id}'` : 'NULL';
+        return `('${notif.id}', '${notif.user_id}', '${escapeSQL(notif.title)}', '${escapeSQL(notif.message)}', '${notif.type}', ${readValue}, ${adminMsgId}, '${notif.created_at}', '${notif.updated_at}')`;
+    });
+    
+    sql += values.join(',\n');
+    sql += ';\n\n';
+    
+    document.getElementById('sqlOutput').textContent = sql;
+}
+
+function convertAdminMessages() {
+    if (!validateJSON()) return;
+    
+    const adminMessages = currentData.admin_messages || [];
+    if (adminMessages.length === 0) {
+        document.getElementById('sqlOutput').textContent = '-- 📨 Aucun message admin à importer';
+        return;
+    }
+    
+    let sql = '-- 📨 Import des Admin Messages\n';
+    sql += 'INSERT INTO admin_messages (id, title, message, type, target_users, created_at, updated_at) VALUES\n';
+    
+    const values = adminMessages.map(msg => 
+        `('${msg.id}', '${escapeSQL(msg.title)}', '${escapeSQL(msg.message)}', '${msg.type}', '${escapeSQL(msg.target_users || 'all')}', '${msg.created_at}', '${msg.updated_at}')`
+    );
+    
+    sql += values.join(',\n');
+    sql += ';\n\n';
+    
+    document.getElementById('sqlOutput').textContent = sql;
+}
+
+function convertAll() {
+    if (!validateJSON()) return;
+    
+    let sql = '-- � IMPORT COMPLET DES DONNÉES - BANKASS AWARDS\n';
+    sql += `-- Généré le: ${new Date().toISOString()}\n`;
+    sql += '-- ATTENTION: Exécutez les CREATE TABLE avant ce script !\n\n';
+    
+    // Ordre d'import important pour respecter les foreign keys
+    const tables = [
+        { name: 'categories', converter: convertCategoriesData, icon: '🎭' },
+        { name: 'users', converter: convertUsersData, icon: '👥' },
+        { name: 'candidates', converter: convertCandidatesData, icon: '🎤' },
+        { name: 'votes', converter: convertVotesData, icon: '🗳️' },
+        { name: 'notifications', converter: convertNotificationsData, icon: '🔔' },
+        { name: 'admin_messages', converter: convertAdminMessagesData, icon: '📨' }
+    ];
+    
+    tables.forEach(table => {
+        const tableData = currentData[table.name] || [];
+        if (tableData.length > 0) {
+            sql += table.converter(tableData);
+        }
+    });
+    
+    // Statistiques
+    sql += '-- ========================================\n';
+    sql += '-- 📊 Statistiques de l\'Import\n';
+    sql += '-- ========================================\n';
+    tables.forEach(table => {
+        const count = (currentData[table.name] || []).length;
+        sql += `-- ${table.icon} ${table.name}: ${count} enregistrements\n`;
+    });
+    sql += '\n-- ✅ Import des données terminé avec succès !\n';
+    sql += '-- 🚀 Prêt pour l\'exécution dans Supabase\n';
+    
+    document.getElementById('sqlOutput').textContent = sql;
+}
+
+// Fonctions de conversion pour le mode "tout"
+function convertCategoriesData(categories) {
+    let sql = '-- 🎭 Categories\n';
+    sql += 'INSERT INTO categories (id, name, description, created_at, updated_at) VALUES\n';
+    const values = categories.map(cat => 
+        `('${cat.id}', '${escapeSQL(cat.name)}', '${escapeSQL(cat.description || '')}', '${cat.created_at}', '${cat.updated_at}')`
+    );
+    sql += values.join(',\n');
+    sql += ';\n\n';
+    return sql;
+}
+
+function convertUsersData(users) {
+    let sql = '-- 👥 Users\n';
+    sql += 'INSERT INTO users (id, name, email, role, phone, created_at, updated_at) VALUES\n';
+    const values = users.map(user => 
+        `('${user.id}', '${escapeSQL(user.name)}', '${user.email}', '${user.role}', '${escapeSQL(user.phone || '')}', '${user.created_at}', '${user.updated_at}')`
+    );
+    sql += values.join(',\n');
+    sql += ';\n\n';
+    return sql;
+}
+
+function convertCandidatesData(candidates) {
+    let sql = '-- 🎤 Candidates\n';
+    sql += 'INSERT INTO candidates (id, name, bio, image_url, audio_file, candidate_song, category_id, created_at, updated_at) VALUES\n';
+    const values = candidates.map(candidate => 
+        `('${candidate.id}', '${escapeSQL(candidate.name)}', '${escapeSQL(candidate.bio || '')}', '${escapeSQL(candidate.image_url || '')}', '${escapeSQL(candidate.audio_file || '')}', '${escapeSQL(candidate.candidate_song || '')}', '${candidate.category_id}', '${candidate.created_at}', '${candidate.updated_at}')`
+    );
+    sql += values.join(',\n');
+    sql += ';\n\n';
+    return sql;
+}
+
+function convertVotesData(votes) {
+    let sql = '-- 🗳️ Votes\n';
+    sql += 'INSERT INTO votes (id, user_id, category_id, candidate_id, created_at, updated_at) VALUES\n';
+    const values = votes.map(vote => 
+        `('${vote.id}', '${vote.user_id}', '${vote.category_id}', '${vote.candidate_id}', '${vote.created_at}', '${vote.updated_at}')`
+    );
+    sql += values.join(',\n');
+    sql += ';\n\n';
+    return sql;
+}
+
+function convertNotificationsData(notifications) {
+    let sql = '-- 🔔 Notifications\n';
+    sql += 'INSERT INTO notifications (id, user_id, title, message, type, read, admin_message_id, created_at, updated_at) VALUES\n';
+    const values = notifications.map(notif => {
+        const readValue = notif.read ? 'true' : 'false';
+        const adminMsgId = notif.admin_message_id ? `'${notif.admin_message_id}'` : 'NULL';
+        return `('${notif.id}', '${notif.user_id}', '${escapeSQL(notif.title)}', '${escapeSQL(notif.message)}', '${notif.type}', ${readValue}, ${adminMsgId}, '${notif.created_at}', '${notif.updated_at}')`;
+    });
+    sql += values.join(',\n');
+    sql += ';\n\n';
+    return sql;
+}
+
+function convertAdminMessagesData(adminMessages) {
+    let sql = '-- 📨 Admin Messages\n';
+    sql += 'INSERT INTO admin_messages (id, title, message, type, target_users, created_at, updated_at) VALUES\n';
+    const values = adminMessages.map(msg => 
+        `('${msg.id}', '${escapeSQL(msg.title)}', '${escapeSQL(msg.message)}', '${msg.type}', '${escapeSQL(msg.target_users || 'all')}', '${msg.created_at}', '${msg.updated_at}')`
+    );
+    sql += values.join(',\n');
+    sql += ';\n\n';
+    return sql;
+}
+
+function copySQL() {
+    const sqlText = document.getElementById('sqlOutput').textContent;
+    if (!sqlText || sqlText === 'Le SQL apparaîtra ici...') {
+        alert('❌ Aucun SQL à copier');
+        return;
+    }
+    
+    navigator.clipboard.writeText(sqlText).then(() => {
+        alert('✅ SQL copié dans le presse-papiers !');
+    }).catch(err => {
+        alert('❌ Erreur lors de la copie: ' + err);
+    });
+}
+
+function clearSQL() {
+    document.getElementById('sqlOutput').textContent = 'Le SQL apparaîtra ici...';
+}
+
+function downloadSQL() {
+    const sqlText = document.getElementById('sqlOutput').textContent;
+    if (!sqlText || sqlText === 'Le SQL apparaîtra ici...') {
+        alert('❌ Aucun SQL à télécharger');
+        return;
+    }
+    
+    const blob = new Blob([sqlText], { type: 'text/sql' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bankass_data_import_${new Date().toISOString().split('T')[0]}.sql`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// Validation automatique du JSON quand on tape
+document.getElementById('jsonInput').addEventListener('input', function() {
+    clearTimeout(this.validationTimeout);
+    this.validationTimeout = setTimeout(validateJSON, 1000);
+});
+
+// Validation au chargement si du texte est déjà présent
+window.addEventListener('load', function() {
+    const jsonInput = document.getElementById('jsonInput');
+    if (jsonInput.value.trim()) {
+        validateJSON();
+    }
+});
+</script>
+</body>
+</html>

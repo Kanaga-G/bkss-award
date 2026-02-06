@@ -12,7 +12,7 @@ export async function GET() {
         category:categories(name),
         candidate:candidates(name)
       `)
-      .order('timestamp', { ascending: false })
+      .order('created_at', { ascending: false })
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const { userId, categoryId, candidateId, candidateName } = body
 
     // Validation
-    if (!userId || !categoryId || !candidateId || !candidateName) {
+    if (!userId || !categoryId || !candidateId) {
       return NextResponse.json({ error: 'Tous les champs sont requis' }, { status: 400 })
     }
 
@@ -53,9 +53,7 @@ export async function POST(request: NextRequest) {
       .insert({
         user_id: userId,
         category_id: categoryId,
-        candidate_id: candidateId,
-        candidate_name: candidateName,
-        timestamp: Date.now()
+        candidate_id: candidateId
       })
       .select()
       .single()

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { useState } from "react"
 import type { Page } from "@/app/page"
 import type { User as UserType } from "@/hooks/use-api-data"
-import { NotificationPanel } from "@/components/notification-panel"
+import { ImprovedNotificationPanel } from "@/components/improved-notification-panel"
 import { ProfilePhotoUpload } from "@/components/profile-photo-upload"
 import {
   DropdownMenu,
@@ -74,12 +74,6 @@ export function Navigation({
               alt="Bankass Awards" 
               className="h-10 w-auto"
             />
-            <div className="hidden sm:block">
-              <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                BANKASS AWARDS
-              </h1>
-              <p className="text-xs text-muted-foreground -mt-0.5">Par l'équipe Winner Boys</p>
-            </div>
           </motion.button>
 
           {/* Desktop Navigation */}
@@ -118,7 +112,7 @@ export function Navigation({
           <div className="flex items-center gap-2">
             {/* Notifications - seulement pour les utilisateurs connectés */}
             {currentUser && (
-              <NotificationPanel userId={currentUser.id} />
+              <ImprovedNotificationPanel userId={currentUser.id} />
             )}
             
             {/* Theme Toggle */}

@@ -64,24 +64,11 @@ export function HeroSection({ setCurrentPage, currentUser, categories = [], vote
               <span className="text-sm font-medium text-primary">Édition 2026</span>
             </motion.div>
 
-            {/* Title */}
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="text-4xl sm:text-5xl md:text-7xl font-bold tracking-tight mb-6"
-            >
-              <span className="block text-foreground">Bienvenue aux</span>
-              <span className="block bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent bg-[length:200%_auto] animate-gradient">
-                BANKASS AWARDS
-              </span>
-            </motion.h1>
-
             {/* Subtitle */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
+              transition={{ delay: 0.2 }}
               className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed"
             >
               Célébrez l'excellence et récompensez les talents exceptionnels de notre communauté. Votez pour vos favoris

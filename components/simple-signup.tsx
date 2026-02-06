@@ -6,7 +6,8 @@ import { UserIcon, MapPin, Mail, Phone, Briefcase, Shield, CheckCircle, AlertCir
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { recordUserConnection } from "@/lib/anti-fraud"
+import { EmailVerificationPopup } from "@/components/email-verification-popup"
+import { getDeviceId } from "@/lib/device-tracking"
 import type { User } from "@/hooks/use-api-data"
 
 interface SimpleSignupProps {
@@ -27,20 +28,14 @@ export function SimpleSignup({ onSuccess, onSwitchToLogin, existingUsers }: Simp
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+  const [showVerificationPopup, setShowVerificationPopup] = useState(false)
+  const [pendingUser, setPendingUser] = useState<User | null>(null)
 
   const domains = [
     "Musique", "Audiovisuel", "Journalisme", "Marketing", 
     "Communication", "Production", "Événementiel", "Art", 
     "Culture", "Sport", "Éducation", "Technologie", "Autre"
   ]
-
-  // Obtenir l'IP client (simplifié pour le développement)
-  const getClientIP = (): string | undefined => {
-    if (typeof window !== 'undefined') {
-      return undefined
-    }
-    return undefined
-  }
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -114,7 +109,10 @@ export function SimpleSignup({ onSuccess, onSwitchToLogin, existingUsers }: Simp
         return
       }
 
-      // Créer l'utilisateur directement
+      // Obtenir l'ID du device
+      const deviceId = getDeviceId()
+
+      // Créer l'utilisateur avec les informations de device
       const response = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -126,28 +124,41 @@ export function SimpleSignup({ onSuccess, onSwitchToLogin, existingUsers }: Simp
           domain: formData.domain,
           city: formData.city,
           role: "VOTER",
+          device_id: deviceId,
+          email_verified: false // Non vérifié par défaut
         })
       })
 
       if (response.ok) {
         const newUser = await response.json()
         
-        // Enregistrer la connexion pour la sécurité
-        recordUserConnection(newUser, getClientIP(), navigator.userAgent)
-        
-        // Stocker l'utilisateur et le connecter directement
-        localStorage.setItem('user', JSON.stringify(newUser))
-        localStorage.setItem('isLoggedIn', 'true')
-        
-        setMessage({
-          type: "success",
-          text: `Compte créé avec succès ! Bienvenue ${formData.fullName}`
+        // Envoyer le code de vérification avec création de session
+        const verificationResponse = await fetch('/api/auth/send-verification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            userId: newUser.id,
+            name: formData.fullName,
+            createSession: true
+          })
         })
-        
-        // Rediriger vers la page d'accueil après 2 secondes
-        setTimeout(() => {
-          onSuccess(newUser)
-        }, 2000)
+
+        const verificationResult = await verificationResponse.json()
+
+        if (verificationResponse.ok && verificationResult.sessionId) {
+          // Rediriger vers la page de vérification avec le sessionId
+          window.location.href = `/verify?sessionId=${verificationResult.sessionId}`
+        } else {
+          // Fallback: afficher la popup si la session échoue
+          setPendingUser(newUser)
+          setShowVerificationPopup(true)
+          
+          setMessage({
+            type: "success",
+            text: "Compte créé ! Veuillez vérifier votre email."
+          })
+        }
       } else {
         const error = await response.json()
         setMessage({
@@ -165,184 +176,211 @@ export function SimpleSignup({ onSuccess, onSwitchToLogin, existingUsers }: Simp
     setIsSubmitting(false)
   }
 
+  const handleVerificationSuccess = () => {
+    if (pendingUser) {
+      // Mettre à jour l'utilisateur avec email_verified: true
+      const verifiedUser = { ...pendingUser, email_verified: true }
+      
+      // Stocker l'utilisateur et le connecter
+      localStorage.setItem('user', JSON.stringify(verifiedUser))
+      localStorage.setItem('isLoggedIn', 'true')
+      
+      // Rediriger vers la page d'accueil
+      onSuccess(verifiedUser)
+    }
+  }
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-md mx-auto"
-    >
-      <div className="bg-card border border-border/50 rounded-2xl p-8 shadow-2xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
-            <Shield className="w-8 h-8 text-primary" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Inscription Simple</h2>
-          <p className="text-muted-foreground text-sm">
-            Créez votre compte en quelques secondes
-          </p>
-        </div>
-
-        {/* Formulaire */}
-        <form onSubmit={handleFormSubmit} className="space-y-6">
-          {/* Nom complet */}
-          <div className="space-y-2">
-            <Label htmlFor="fullName">Nom complet</Label>
-            <div className="relative">
-              <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                id="fullName"
-                type="text"
-                value={formData.fullName}
-                onChange={(e) => handleInputChange("fullName", e.target.value)}
-                placeholder="Votre nom complet"
-                className="pl-11 h-12"
-                required
-              />
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md mx-auto"
+      >
+        <div className="bg-card border border-border/50 rounded-2xl p-8 shadow-2xl">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+              <Shield className="w-8 h-8 text-primary" />
             </div>
-          </div>
-
-          {/* Email */}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                placeholder="votre@email.com"
-                className="pl-11 h-12"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Téléphone */}
-          <div className="space-y-2">
-            <Label htmlFor="phone">Numéro de téléphone</Label>
-            <div className="relative">
-              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => handleInputChange("phone", e.target.value)}
-                placeholder="+223 XX XX XX XX"
-                className="pl-11 h-12"
-                required
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Format: +223 suivi de 8 chiffres (ex: +223 76 12 34 56)
+            <h2 className="text-2xl font-bold mb-2">Inscription Simple</h2>
+            <p className="text-muted-foreground text-sm">
+              Créez votre compte en quelques secondes
             </p>
           </div>
 
-          {/* Mot de passe */}
-          <div className="space-y-2">
-            <Label htmlFor="password">Mot de passe</Label>
-            <div className="relative">
-              <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => handleInputChange("password", e.target.value)}
-                placeholder="Choisissez un mot de passe"
-                className="pl-11 h-12"
-                required
-                minLength={6}
-              />
+          {/* Formulaire */}
+          <form onSubmit={handleFormSubmit} className="space-y-6">
+            {/* Nom complet */}
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Nom complet</Label>
+              <div className="relative">
+                <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="fullName"
+                  type="text"
+                  value={formData.fullName}
+                  onChange={(e) => handleInputChange("fullName", e.target.value)}
+                  placeholder="Votre nom complet"
+                  className="pl-11 h-12"
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Domaine */}
-          <div className="space-y-2">
-            <Label htmlFor="domain">Domaine d'activité</Label>
-            <div className="relative">
-              <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <select
-                id="domain"
-                value={formData.domain}
-                onChange={(e) => handleInputChange("domain", e.target.value)}
-                className="w-full pl-11 h-12 px-3 border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md"
-                required
+            {/* Email */}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  placeholder="votre@email.com"
+                  className="pl-11 h-12"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Téléphone */}
+            <div className="space-y-2">
+              <Label htmlFor="phone">Numéro de téléphone</Label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange("phone", e.target.value)}
+                  placeholder="+223 XX XX XX XX"
+                  className="pl-11 h-12"
+                  required
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Format: +223 suivi de 8 chiffres (ex: +223 76 12 34 56)
+              </p>
+            </div>
+
+            {/* Mot de passe */}
+            <div className="space-y-2">
+              <Label htmlFor="password">Mot de passe</Label>
+              <div className="relative">
+                <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => handleInputChange("password", e.target.value)}
+                  placeholder="Choisissez un mot de passe"
+                  className="pl-11 h-12"
+                  required
+                  minLength={6}
+                />
+              </div>
+            </div>
+
+            {/* Domaine */}
+            <div className="space-y-2">
+              <Label htmlFor="domain">Domaine d'activité</Label>
+              <div className="relative">
+                <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <select
+                  id="domain"
+                  value={formData.domain}
+                  onChange={(e) => handleInputChange("domain", e.target.value)}
+                  className="w-full pl-11 h-12 px-3 border border-input bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 rounded-md"
+                  required
+                >
+                  <option value="">Sélectionnez votre domaine</option>
+                  {domains.map((domain) => (
+                    <option key={domain} value={domain}>
+                      {domain}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Ville */}
+            <div className="space-y-2">
+              <Label htmlFor="city">Ville</Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="city"
+                  type="text"
+                  value={formData.city}
+                  onChange={(e) => handleInputChange("city", e.target.value)}
+                  placeholder="Votre ville"
+                  className="pl-11 h-12"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Message */}
+            {message && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`p-3 rounded-lg flex items-center gap-2 text-sm ${
+                  message.type === 'success' 
+                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
+                    : 'bg-red-500/10 text-red-500 border border-red-500/20'
+                }`}
               >
-                <option value="">Sélectionnez votre domaine</option>
-                {domains.map((domain) => (
-                  <option key={domain} value={domain}>
-                    {domain}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Ville */}
-          <div className="space-y-2">
-            <Label htmlFor="city">Ville</Label>
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <Input
-                id="city"
-                type="text"
-                value={formData.city}
-                onChange={(e) => handleInputChange("city", e.target.value)}
-                placeholder="Votre ville"
-                className="pl-11 h-12"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Message */}
-          {message && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`p-3 rounded-lg flex items-center gap-2 text-sm ${
-                message.type === 'success' 
-                  ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
-                  : 'bg-red-500/10 text-red-500 border border-red-500/20'
-              }`}
-            >
-              {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-              {message.text}
-            </motion.div>
-          )}
-
-          {/* Bouton d'inscription */}
-          <Button
-            type="submit"
-            className="w-full h-12 bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-lg"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Inscription en cours...
-              </>
-            ) : (
-              "S'inscrire"
+                {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                {message.text}
+              </motion.div>
             )}
-          </Button>
-        </form>
 
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            Déjà un compte ?{" "}
-            <button
-              type="button"
-              onClick={onSwitchToLogin}
-              className="text-primary hover:underline font-medium"
+            {/* Bouton d'inscription */}
+            <Button
+              type="submit"
+              className="w-full h-12 bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-lg"
+              disabled={isSubmitting}
             >
-              Se connecter
-            </button>
-          </p>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Inscription en cours...
+                </>
+              ) : (
+                "S'inscrire"
+              )}
+            </Button>
+          </form>
+
+          {/* Footer */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Déjà un compte ?{" "}
+              <button
+                type="button"
+                onClick={onSwitchToLogin}
+                className="text-primary hover:underline font-medium"
+              >
+                Se connecter
+              </button>
+            </p>
+          </div>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+
+      {/* Popup de vérification email */}
+      {pendingUser && (
+        <EmailVerificationPopup
+          isOpen={showVerificationPopup}
+          onClose={() => setShowVerificationPopup(false)}
+          email={pendingUser.email}
+          userId={pendingUser.id}
+          onVerificationSuccess={handleVerificationSuccess}
+        />
+      )}
+    </>
   )
 }
