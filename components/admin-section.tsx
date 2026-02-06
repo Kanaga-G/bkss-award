@@ -404,7 +404,12 @@ export function AdminSection({
                       <Crown className={`w-6 h-6 ${leadershipRevealed ? "text-amber-500" : "text-muted-foreground"}`} />
                     </div>
                     <div>
-                      <p className="font-semibold">Prix Leadership - Hommage Spécial</p>
+                      <p className="font-semibold">
+                        {leadershipRevealed 
+                          ? `Prix Leadership - ${categories.find((c) => c.isLeadershipPrize)?.preAssignedWinner || "Lauréat"}`
+                          : "Prix Leadership - Hommage Spécial"
+                        }
+                      </p>
                       <p className="text-muted-foreground text-sm">
                         {leadershipRevealed ? "Le prix a été révélé au public" : "Le prix est masqué pour le moment"}
                       </p>
@@ -772,9 +777,17 @@ export function AdminSection({
                     <Crown className="w-8 h-8 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold">Prix Leadership - Hommage Spécial</h2>
+                    <h2 className="text-xl font-bold">
+                      {leadershipRevealed 
+                        ? `Prix Leadership - ${categories.find((c) => c.isLeadershipPrize)?.preAssignedWinner || "Lauréat"}`
+                        : "Prix Leadership - Hommage Spécial"
+                      }
+                    </h2>
                     <p className="text-muted-foreground">
-                      Ce prix spécial honore la mémoire et l'héritage du lauréat
+                      {leadershipRevealed
+                        ? `Ce prix spécial honore la mémoire et l'héritage de ${categories.find((c) => c.isLeadershipPrize)?.preAssignedWinner || "du lauréat"}`
+                        : "Ce prix spécial honore la mémoire et l'héritage du lauréat"
+                      }
                     </p>
                   </div>
                 </div>
