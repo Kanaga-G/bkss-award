@@ -166,6 +166,8 @@ export function AdminSection({
   const handleSaveCandidate = async (categoryId: string, candidate: Candidate) => {
     setIsUpdating(true)
     try {
+      console.log('🔄 Mise à jour candidat:', candidate.id, candidate.name)
+      
       // Sauvegarder en base de données d'abord
       await updateCandidate(candidate.id, candidate)
       
@@ -176,8 +178,9 @@ export function AdminSection({
       setTimeout(() => setMessage(null), 3000)
     } catch (error) {
       console.error("Erreur lors de la mise à jour du candidat:", error)
-      setMessage({ type: "error", text: "Erreur lors de la mise à jour du candidat" })
-      setTimeout(() => setMessage(null), 3000)
+      const errorMessage = error instanceof Error ? error.message : "Erreur lors de la mise à jour du candidat"
+      setMessage({ type: "error", text: errorMessage })
+      setTimeout(() => setMessage(null), 5000)
     } finally {
       setIsUpdating(false)
     }

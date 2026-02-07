@@ -75,8 +75,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'ID candidat requis' }, { status: 400 })
     }
 
+    console.log('📤 Données reçues pour mise à jour:', { id, updateData })
+
     // Convertir les noms de champs pour la base de données
     const dbUpdateData: any = {}
+    
+    // Mapping explicite des champs
     if (updateData.categoryId !== undefined) {
       dbUpdateData.category_id = updateData.categoryId
     }
@@ -90,12 +94,15 @@ export async function PUT(request: NextRequest) {
       dbUpdateData.audio_file = updateData.audioFile
     }
 
-    // Ajouter les autres champs
-    Object.keys(updateData).forEach(key => {
-      if (!['categoryId', 'songCount', 'candidateSong', 'audioFile'].includes(key)) {
+    // Ajouter les autres champs qui n'ont pas besoin de conversion
+    const directFields = ['name', 'alias', 'image', 'bio', 'achievements']
+    directFields.forEach(key => {
+      if (updateData[key] !== undefined) {
         dbUpdateData[key] = updateData[key]
       }
     })
+
+    console.log('📤 Données converties pour DB:', dbUpdateData)
 
     const { data, error } = await supabaseAdmin
       .from('candidates')
@@ -105,11 +112,14 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (error) {
+      console.error('❌ Erreur Supabase:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    console.log('✅ Candidat mis à jour:', data)
     return NextResponse.json(data)
   } catch (error) {
+    console.error('❌ Erreur serveur:', error)
     return NextResponse.json({ error: 'Erreur serveur' }, { status: 500 })
   }
 }
